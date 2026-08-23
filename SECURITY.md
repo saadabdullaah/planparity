@@ -39,7 +39,12 @@ system security sandbox and does not guarantee zero network activity.
 - Raw engine JSON is normalized in the backend and is not persisted or returned by the API.
 - State attribute values are omitted; structural type information and sensitivity markers may be retained.
 
+## Local path authority
+
+PlanParity is intentionally a local-file analysis tool. A holder of the ephemeral UI session token can ask the loopback backend to read a state file, copy a configuration directory, or use an explicitly selected engine binary path. Those paths are not a remote tenancy boundary: the token holder is expected to be the same operating-system user who started PlanParity.
+
+Do not expose the listener or bootstrap token to another user, browser profile, or process. Restart the server if the token may have escaped. The backend validates regular files and expected engine filenames, rejects workspace links and copied paths that escape the selected source root, limits copied file sizes and counts, and never returns raw file contents. These controls reduce accidental exposure; they do not turn PlanParity into a privilege boundary between local users.
+
 ## Supported versions
 
 Until the first stable release, users should build from the latest tagged pre-release and should not use PlanParity against irreplaceable state without an independent backup.
-

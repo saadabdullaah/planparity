@@ -47,3 +47,4 @@ Jobs and results are memory-only, capped per process, and discarded on shutdown.
 - CSP, frame denial, MIME sniffing protection, referrer isolation, and cross-origin isolation headers are set globally.
 - There is no filesystem-browsing endpoint and no endpoint accepts arbitrary executable names.
 
+The authenticated API does accept caller-selected local state/configuration paths and explicit `terraform`/`tofu` binary paths because local analysis is its purpose. Treat the token as authority to use those paths under the current operating-system account; it is not an authorization boundary between local users. See `SECURITY.md` before using the UI in a shared or untrusted desktop session.
