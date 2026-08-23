@@ -9,9 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -169,20 +167,11 @@ func (server *Server) authorizeLocalPath(input string) (string, error) {
 	if err != nil {
 		return "", errors.New("local path does not exist or cannot be resolved")
 	}
-	rootForComparison := server.pathRoot
-	resolvedForComparison := filepath.Clean(resolved)
-	if runtime.GOOS == "windows" {
-		rootForComparison = strings.ToLower(rootForComparison)
-		resolvedForComparison = strings.ToLower(resolvedForComparison)
-	}
-	rootPrefix := rootForComparison
-	if !strings.HasSuffix(rootPrefix, string(filepath.Separator)) {
-		rootPrefix += string(filepath.Separator)
-	}
-	if resolvedForComparison != rootForComparison && !strings.HasPrefix(resolvedForComparison, rootPrefix) {
+	relative, err := filepath.Rel(server.pathRoot, resolved)
+	if err != nil || !filepath.IsLocal(relative) {
 		return "", errors.New("local path is outside the authorized UI path root")
 	}
-	return resolved, nil
+	return filepath.Join(server.pathRoot, relative), nil
 }
 
 // Address returns the bound host and port after Listen.

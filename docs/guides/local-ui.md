@@ -22,7 +22,7 @@ The home screen reports detected Terraform/OpenTofu engines, links to the three 
 
 ## Inspect
 
-Choose an engine and a state path inside the printed UI path root. Results provide an overview, module/provider inventory, searchable resource table, dependency graph, findings, and sanitized JSON export.
+Choose an engine and a state path inside the printed UI path root. Any explicit engine path entered in the browser must also resolve inside that root; binaries configured on the `planparity ui` command line are trusted startup inputs and may be elsewhere. Results provide an overview, module/provider inventory, searchable resource table, dependency graph, findings, and sanitized JSON export.
 
 ## Compare
 

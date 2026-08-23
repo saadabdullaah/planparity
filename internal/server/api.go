@@ -110,10 +110,14 @@ func (server *Server) handleInspect(writer http.ResponseWriter, request *http.Re
 	if !ok {
 		return
 	}
+	enginePath, ok := server.authorizeAPIEnginePath(writer, kind, input.EnginePath)
+	if !ok {
+		return
+	}
 	server.startJob(writer, "inspect", func(ctx context.Context, emit func(string, string)) (any, error) {
 		emit("engine.detecting", "Detecting engine")
 		emit("state.normalizing", "Normalizing state")
-		result, err := server.service.Inspect(ctx, app.InspectRequest{Engine: kind, EnginePath: input.EnginePath, StatePath: statePath})
+		result, err := server.service.Inspect(ctx, app.InspectRequest{Engine: kind, EnginePath: enginePath, StatePath: statePath})
 		if err == nil {
 			emit("report.finalizing", "Finalizing sanitized report")
 		}
@@ -147,11 +151,15 @@ func (server *Server) handleCompare(writer http.ResponseWriter, request *http.Re
 	if !ok {
 		return
 	}
+	enginePath, ok := server.authorizeAPIEnginePath(writer, kind, input.EnginePath)
+	if !ok {
+		return
+	}
 	server.startJob(writer, "compare", func(ctx context.Context, emit func(string, string)) (any, error) {
 		emit("engine.detecting", "Detecting engine")
 		emit("state.normalizing", "Normalizing snapshots")
 		emit("comparison.running", "Comparing resources")
-		result, err := server.service.Compare(ctx, app.CompareRequest{Engine: kind, EnginePath: input.EnginePath, BeforePath: beforePath, AfterPath: afterPath, ProbableMoveThreshold: threshold})
+		result, err := server.service.Compare(ctx, app.CompareRequest{Engine: kind, EnginePath: enginePath, BeforePath: beforePath, AfterPath: afterPath, ProbableMoveThreshold: threshold})
 		if err == nil {
 			emit("report.finalizing", "Finalizing sanitized report")
 		}
@@ -177,11 +185,15 @@ func (server *Server) handlePlan(writer http.ResponseWriter, request *http.Reque
 	if !ok {
 		return
 	}
+	enginePath, ok := server.authorizeAPIEnginePath(writer, kind, input.EnginePath)
+	if !ok {
+		return
+	}
 	server.startJob(writer, "rehearsal.plan", func(ctx context.Context, emit func(string, string)) (any, error) {
 		emit("workspace.preparing", "Preparing copied workspace")
 		emit("engine.initializing", "Initializing engine without backend")
 		emit("plan.generating", "Generating refresh-disabled plan")
-		return server.service.RehearsePlan(ctx, app.PlanRehearsalRequest{Engine: kind, EnginePath: input.EnginePath, ConfigPath: configPath, StatePath: statePath, InheritProxy: input.InheritProxy, AllowRegistryAccess: input.AllowRegistryAccess, PathRoot: server.PathRoot()})
+		return server.service.RehearsePlan(ctx, app.PlanRehearsalRequest{Engine: kind, EnginePath: enginePath, ConfigPath: configPath, StatePath: statePath, InheritProxy: input.InheritProxy, AllowRegistryAccess: input.AllowRegistryAccess, PathRoot: server.PathRoot()})
 	})
 }
 
@@ -204,11 +216,19 @@ func (server *Server) handleUpgrade(writer http.ResponseWriter, request *http.Re
 	if !ok {
 		return
 	}
+	fromEnginePath, ok := server.authorizeAPIEnginePath(writer, fromKind, input.FromEnginePath)
+	if !ok {
+		return
+	}
+	toEnginePath, ok := server.authorizeAPIEnginePath(writer, toKind, input.ToEnginePath)
+	if !ok {
+		return
+	}
 	server.startJob(writer, "rehearsal.upgrade", func(ctx context.Context, emit func(string, string)) (any, error) {
 		emit("workspace.preparing", "Preparing isolated baseline and candidate workspaces")
 		emit("plan.generating", "Generating baseline and candidate plans")
 		emit("comparison.running", "Comparing engine behavior")
-		return server.service.RehearseUpgrade(ctx, app.UpgradeRehearsalRequest{FromEngine: fromKind, FromEnginePath: input.FromEnginePath, ToEngine: toKind, ToEnginePath: input.ToEnginePath, ConfigPath: configPath, StatePath: statePath, InheritProxy: input.InheritProxy, AllowRegistryAccess: input.AllowRegistryAccess, PathRoot: server.PathRoot()})
+		return server.service.RehearseUpgrade(ctx, app.UpgradeRehearsalRequest{FromEngine: fromKind, FromEnginePath: fromEnginePath, ToEngine: toKind, ToEnginePath: toEnginePath, ConfigPath: configPath, StatePath: statePath, InheritProxy: input.InheritProxy, AllowRegistryAccess: input.AllowRegistryAccess, PathRoot: server.PathRoot()})
 	})
 }
 
@@ -229,11 +249,19 @@ func (server *Server) handleMigrate(writer http.ResponseWriter, request *http.Re
 	if !ok {
 		return
 	}
+	terraformPath, ok := server.authorizeAPIEnginePath(writer, model.EngineTerraform, input.TerraformPath)
+	if !ok {
+		return
+	}
+	openTofuPath, ok := server.authorizeAPIEnginePath(writer, model.EngineOpenTofu, input.OpenTofuPath)
+	if !ok {
+		return
+	}
 	server.startJob(writer, "rehearsal.migrate", func(ctx context.Context, emit func(string, string)) (any, error) {
 		emit("workspace.preparing", "Preparing Terraform and OpenTofu workspaces")
 		emit("plan.generating", "Generating engine plans")
 		emit("comparison.running", "Comparing Terraform and OpenTofu")
-		return server.service.RehearseMigrate(ctx, app.MigrateRehearsalRequest{TerraformPath: input.TerraformPath, OpenTofuPath: input.OpenTofuPath, ConfigPath: configPath, StatePath: statePath, InheritProxy: input.InheritProxy, AllowRegistryAccess: input.AllowRegistryAccess, PathRoot: server.PathRoot()})
+		return server.service.RehearseMigrate(ctx, app.MigrateRehearsalRequest{TerraformPath: terraformPath, OpenTofuPath: openTofuPath, ConfigPath: configPath, StatePath: statePath, InheritProxy: input.InheritProxy, AllowRegistryAccess: input.AllowRegistryAccess, PathRoot: server.PathRoot()})
 	})
 }
 
@@ -241,6 +269,21 @@ func (server *Server) authorizeAPIPath(writer http.ResponseWriter, input string)
 	path, err := server.authorizeLocalPath(input)
 	if err != nil {
 		writeAPIError(writer, http.StatusBadRequest, "INVALID_PATH", "State and configuration paths must exist within the UI path root printed in the terminal.")
+		return "", false
+	}
+	return path, true
+}
+
+func (server *Server) authorizeAPIEnginePath(writer http.ResponseWriter, kind model.EngineKind, input string) (string, bool) {
+	if input == "" {
+		if kind == model.EngineOpenTofu {
+			return server.options.OpenTofuPath, true
+		}
+		return server.options.TerraformPath, true
+	}
+	path, err := server.authorizeLocalPath(input)
+	if err != nil {
+		writeAPIError(writer, http.StatusBadRequest, "INVALID_ENGINE_PATH", "Explicit engine binaries must exist within the UI path root printed in the terminal.")
 		return "", false
 	}
 	return path, true
