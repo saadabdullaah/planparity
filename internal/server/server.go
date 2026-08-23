@@ -7,7 +7,11 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
+	"path/filepath"
+	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -21,6 +25,7 @@ type Options struct {
 	AllowedOrigins    []string
 	TerraformPath     string
 	OpenTofuPath      string
+	AllowedPathRoot   string
 	MaxRequestBytes   int64
 	ReadHeaderTimeout time.Duration
 }
@@ -36,6 +41,7 @@ type Server struct {
 	listener net.Listener
 	mu       sync.RWMutex
 	address  string
+	pathRoot string
 }
 
 // New constructs a server without binding a port.
@@ -59,11 +65,31 @@ func New(service *app.Service, options Options) (*Server, error) {
 	if options.ReadHeaderTimeout <= 0 {
 		options.ReadHeaderTimeout = 5 * time.Second
 	}
+	pathRoot := options.AllowedPathRoot
+	var err error
+	if pathRoot == "" {
+		pathRoot, err = os.Getwd()
+		if err != nil {
+			return nil, fmt.Errorf("resolve UI path root: %w", err)
+		}
+	}
+	pathRoot, err = filepath.Abs(pathRoot)
+	if err != nil {
+		return nil, fmt.Errorf("resolve UI path root: %w", err)
+	}
+	pathRoot, err = filepath.EvalSymlinks(pathRoot)
+	if err != nil {
+		return nil, fmt.Errorf("resolve UI path root links: %w", err)
+	}
+	pathRootInfo, err := os.Stat(pathRoot)
+	if err != nil || !pathRootInfo.IsDir() {
+		return nil, errors.New("UI path root must be an existing directory")
+	}
 	token, err := randomToken()
 	if err != nil {
 		return nil, err
 	}
-	server := &Server{options: options, service: service, token: token}
+	server := &Server{options: options, service: service, token: token, pathRoot: filepath.Clean(pathRoot)}
 	server.jobs = app.NewJobManager(context.Background(), 100)
 	server.handler = server.securityMiddleware(server.routes())
 	server.http = &http.Server{Handler: server.handler, ReadHeaderTimeout: options.ReadHeaderTimeout, IdleTimeout: 60 * time.Second}
@@ -123,6 +149,41 @@ func (server *Server) Handler() http.Handler { return server.handler }
 
 // SessionToken returns the ephemeral token used by the CLI bootstrap URL.
 func (server *Server) SessionToken() string { return server.token }
+
+// PathRoot is the only directory tree the browser API may use for state and configuration inputs.
+func (server *Server) PathRoot() string { return server.pathRoot }
+
+func (server *Server) authorizeLocalPath(input string) (string, error) {
+	if input == "" {
+		return "", errors.New("local path is required")
+	}
+	candidate := input
+	if !filepath.IsAbs(candidate) {
+		candidate = filepath.Join(server.pathRoot, candidate)
+	}
+	absolute, err := filepath.Abs(candidate)
+	if err != nil {
+		return "", errors.New("local path is invalid")
+	}
+	resolved, err := filepath.EvalSymlinks(absolute)
+	if err != nil {
+		return "", errors.New("local path does not exist or cannot be resolved")
+	}
+	rootForComparison := server.pathRoot
+	resolvedForComparison := filepath.Clean(resolved)
+	if runtime.GOOS == "windows" {
+		rootForComparison = strings.ToLower(rootForComparison)
+		resolvedForComparison = strings.ToLower(resolvedForComparison)
+	}
+	rootPrefix := rootForComparison
+	if !strings.HasSuffix(rootPrefix, string(filepath.Separator)) {
+		rootPrefix += string(filepath.Separator)
+	}
+	if resolvedForComparison != rootForComparison && !strings.HasPrefix(resolvedForComparison, rootPrefix) {
+		return "", errors.New("local path is outside the authorized UI path root")
+	}
+	return resolved, nil
+}
 
 // Address returns the bound host and port after Listen.
 func (server *Server) Address() string {

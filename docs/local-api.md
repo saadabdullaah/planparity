@@ -30,7 +30,7 @@ The fragment is not part of HTTP requests. The frontend reads it once, keeps it 
 | `GET` | `/api/v1/results/{id}` | Read a completed sanitized result |
 | `GET` | `/api/v1/results/{id}/export` | Download sanitized JSON |
 
-All endpoints except the three read-only health/system endpoints require the token. Requests reject unknown JSON fields and bodies over 1 MiB by default. See `schemas/api-v1.json` for request contracts.
+All endpoints except the three read-only health/system endpoints require the token. Requests reject unknown JSON fields and bodies over 1 MiB by default. State and configuration paths must resolve inside the UI path root selected at process startup; traversal and links to outside files are rejected before job creation. See `schemas/api-v1.json` for request contracts.
 
 ## Job lifecycle
 
@@ -47,4 +47,4 @@ Jobs and results are memory-only, capped per process, and discarded on shutdown.
 - CSP, frame denial, MIME sniffing protection, referrer isolation, and cross-origin isolation headers are set globally.
 - There is no filesystem-browsing endpoint and no endpoint accepts arbitrary executable names.
 
-The authenticated API does accept caller-selected local state/configuration paths and explicit `terraform`/`tofu` binary paths because local analysis is its purpose. Treat the token as authority to use those paths under the current operating-system account; it is not an authorization boundary between local users. See `SECURITY.md` before using the UI in a shared or untrusted desktop session.
+The authenticated API accepts caller-selected local state/configuration paths only inside the startup path root. Explicit `terraform`/`tofu` binary paths may be elsewhere because local analysis is their purpose. Treat the token as authority to use that root and those binaries under the current operating-system account; it is not an authorization boundary between local users. See `SECURITY.md` before using the UI in a shared or untrusted desktop session.

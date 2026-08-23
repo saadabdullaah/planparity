@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -16,7 +18,7 @@ import (
 
 func newTestServer(t *testing.T, maxBytes int64) *Server {
 	t.Helper()
-	instance, err := New(app.NewService(nil, 100*time.Millisecond), Options{Host: "127.0.0.1", Port: 8765, MaxRequestBytes: maxBytes})
+	instance, err := New(app.NewService(nil, 100*time.Millisecond), Options{Host: "127.0.0.1", Port: 8765, MaxRequestBytes: maxBytes, AllowedPathRoot: t.TempDir()})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,7 +94,15 @@ func TestStrictRequestDecoding(t *testing.T) {
 func TestFailedJobNeverReturnsInternalDetail(t *testing.T) {
 	instance := newTestServer(t, 0)
 	canary := "PP_SECRET_CANARY_NEVER_EXPOSE_7e53f9"
-	payload := `{"engine":"terraform","engine_path":"C:\\\\missing\\\\terraform.exe","state":"` + canary + `"}`
+	statePath := filepath.Join(instance.PathRoot(), canary+".tfstate")
+	if err := os.WriteFile(statePath, []byte(`{"version":4}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	payloadBytes, err := json.Marshal(map[string]string{"engine": "terraform", "engine_path": `C:\missing\terraform.exe`, "state": statePath})
+	if err != nil {
+		t.Fatal(err)
+	}
+	payload := string(payloadBytes)
 	accepted := request(instance, http.MethodPost, "/api/v1/inspect", instance.SessionToken(), strings.NewReader(payload))
 	if accepted.Code != http.StatusAccepted {
 		t.Fatalf("start status = %d: %s", accepted.Code, accepted.Body.String())
@@ -122,6 +132,48 @@ func TestFailedJobNeverReturnsInternalDetail(t *testing.T) {
 	result := request(instance, http.MethodGet, "/api/v1/results/"+response.JobID, instance.SessionToken(), nil)
 	if result.Code != http.StatusConflict || strings.Contains(result.Body.String(), canary) {
 		t.Fatalf("unexpected failed result response: %d %s", result.Code, result.Body.String())
+	}
+}
+
+func TestRejectsStatePathsOutsideTheAuthorizedRoot(t *testing.T) {
+	outer := t.TempDir()
+	allowed := filepath.Join(outer, "allowed")
+	if err := os.Mkdir(allowed, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	outside := filepath.Join(outer, "outside.tfstate")
+	if err := os.WriteFile(outside, []byte(`{"version":4}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	instance, err := New(app.NewService(nil, 100*time.Millisecond), Options{Host: "127.0.0.1", Port: 8765, AllowedPathRoot: allowed})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(instance.jobs.Close)
+
+	payload, err := json.Marshal(map[string]string{"engine": "terraform", "state": outside})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rejected := request(instance, http.MethodPost, "/api/v1/inspect", instance.SessionToken(), bytes.NewReader(payload))
+	if rejected.Code != http.StatusBadRequest || !strings.Contains(rejected.Body.String(), `"code":"INVALID_PATH"`) {
+		t.Fatalf("outside path status = %d: %s", rejected.Code, rejected.Body.String())
+	}
+	if strings.Contains(rejected.Body.String(), outside) {
+		t.Fatal("path rejection exposed the supplied path")
+	}
+
+	link := filepath.Join(allowed, "linked.tfstate")
+	if err := os.Symlink(outside, link); err != nil {
+		t.Skipf("symbolic links are unavailable: %v", err)
+	}
+	linkPayload, err := json.Marshal(map[string]string{"engine": "terraform", "state": link})
+	if err != nil {
+		t.Fatal(err)
+	}
+	linked := request(instance, http.MethodPost, "/api/v1/inspect", instance.SessionToken(), bytes.NewReader(linkPayload))
+	if linked.Code != http.StatusBadRequest {
+		t.Fatalf("linked outside path status = %d: %s", linked.Code, linked.Body.String())
 	}
 }
 
