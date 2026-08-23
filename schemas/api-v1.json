@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://planparity.dev/schemas/api-v1.json",
+  "title": "PlanParity local API v1 requests",
+  "oneOf": [
+    { "$ref": "#/$defs/inspectRequest" },
+    { "$ref": "#/$defs/compareRequest" },
+    { "$ref": "#/$defs/planRequest" },
+    { "$ref": "#/$defs/upgradeRequest" },
+    { "$ref": "#/$defs/migrateRequest" }
+  ],
+  "$defs": {
+    "engine": { "enum": ["terraform", "opentofu"] },
+    "inspectRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["engine", "state"],
+      "properties": {
+        "engine": { "$ref": "#/$defs/engine" },
+        "engine_path": { "type": "string" },
+        "state": { "type": "string", "minLength": 1 }
+      }
+    },
+    "compareRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["engine", "before", "after"],
+      "properties": {
+        "engine": { "$ref": "#/$defs/engine" },
+        "engine_path": { "type": "string" },
+        "before": { "type": "string", "minLength": 1 },
+        "after": { "type": "string", "minLength": 1 },
+        "probable_move_threshold": { "type": "number", "minimum": 0.5, "maximum": 1 }
+      }
+    },
+    "planRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["engine", "config", "state"],
+      "properties": {
+        "engine": { "$ref": "#/$defs/engine" },
+        "engine_path": { "type": "string" },
+        "config": { "type": "string", "minLength": 1 },
+        "state": { "type": "string", "minLength": 1 },
+        "allow_registry_access": { "type": "boolean" },
+        "inherit_proxy": { "type": "boolean" }
+      }
+    },
+    "upgradeRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from_engine", "from_engine_path", "to_engine", "to_engine_path", "config", "state"],
+      "properties": {
+        "from_engine": { "$ref": "#/$defs/engine" },
+        "from_engine_path": { "type": "string", "minLength": 1 },
+        "to_engine": { "$ref": "#/$defs/engine" },
+        "to_engine_path": { "type": "string", "minLength": 1 },
+        "config": { "type": "string", "minLength": 1 },
+        "state": { "type": "string", "minLength": 1 },
+        "allow_registry_access": { "type": "boolean" },
+        "inherit_proxy": { "type": "boolean" }
+      }
+    },
+    "migrateRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["terraform_path", "opentofu_path", "config", "state"],
+      "properties": {
+        "terraform_path": { "type": "string" },
+        "opentofu_path": { "type": "string" },
+        "config": { "type": "string" },
+        "state": { "type": "string" },
+        "allow_registry_access": { "type": "boolean" },
+        "inherit_proxy": { "type": "boolean" }
+      }
+    }
+  }
+}
