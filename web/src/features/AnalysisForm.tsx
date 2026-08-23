@@ -19,7 +19,7 @@ const descriptions: Record<AnalysisView, { title: string; copy: string }> = {
   rehearse: { title: 'Run a restricted rehearsal', copy: 'Generate plans inside a temporary workspace with refresh disabled.' },
 }
 
-export function AnalysisForm({ view, onSubmit, busy }: { view: AnalysisView; onSubmit: (path: string, payload: unknown) => void; busy: boolean }) {
+export function AnalysisForm({ view, onSubmit, onModeChange, busy }: { view: AnalysisView; onSubmit: (path: string, payload: unknown) => void; onModeChange: () => void; busy: boolean }) {
   const [engine, setEngine] = useState('terraform')
   const [enginePath, setEnginePath] = useState('')
   const [state, setState] = useState('')
@@ -44,20 +44,26 @@ export function AnalysisForm({ view, onSubmit, busy }: { view: AnalysisView; onS
     if (view === 'rehearse' && kind === 'upgrade') onSubmit('/api/v1/rehearsals/upgrade', { from_engine: engine, from_engine_path: baselinePath, to_engine: candidateEngine, to_engine_path: candidatePath, config, state, allow_registry_access: allowRegistry, inherit_proxy: inheritProxy })
   }
 
+  function selectKind(option: RehearsalKind) {
+    if (option === kind) return
+    setKind(option)
+    onModeChange()
+  }
+
   const icon = view === 'inspect' ? <FolderOpen size={22} weight="duotone" /> : view === 'compare' ? <Path size={22} weight="duotone" /> : <Flask size={22} weight="duotone" />
 
   return <form className="analysisForm" onSubmit={submit}>
     <div className="formIntro"><span className="formIcon">{icon}</span><h1>{descriptions[view].title}</h1><p>{descriptions[view].copy}</p></div>
 
-    {view === 'rehearse' && <fieldset className="modePicker"><legend>Rehearsal type</legend>{(['plan', 'upgrade', 'migrate'] as const).map((option) => <button className={kind === option ? 'active' : ''} type="button" onClick={() => setKind(option)} key={option}>{option === 'migrate' ? 'Parity' : option[0].toUpperCase() + option.slice(1)}</button>)}</fieldset>}
+    {view === 'rehearse' && <fieldset className="modePicker"><legend>Rehearsal type</legend>{(['plan', 'upgrade', 'migrate'] as const).map((option) => <button className={kind === option ? 'active' : ''} type="button" onClick={() => selectKind(option)} key={option}>{option === 'migrate' ? 'Parity' : option[0].toUpperCase() + option.slice(1)}</button>)}</fieldset>}
 
     {view !== 'rehearse' || kind === 'plan' ? <EngineSelect value={engine} onChange={setEngine} /> : null}
-    {view === 'inspect' && <Field label="State file" hint="Path inside the UI root printed in the terminal"><input required value={state} onChange={(event) => setState(event.target.value)} placeholder="D:\\infra\\terraform.tfstate" /></Field>}
-    {view === 'compare' && <><Field label="Before state" hint="Must be inside the UI path root"><input required value={before} onChange={(event) => setBefore(event.target.value)} placeholder="D:\\infra\\state-before.tfstate" /></Field><Field label="After state" hint="Must be inside the UI path root"><input required value={after} onChange={(event) => setAfter(event.target.value)} placeholder="D:\\infra\\state-after.tfstate" /></Field></>}
-    {view === 'rehearse' && <><Field label="Configuration directory" hint="Must be inside the UI path root"><input required value={config} onChange={(event) => setConfig(event.target.value)} placeholder="D:\\infra" /></Field><Field label="State file" hint="Must be inside the UI path root"><input required value={state} onChange={(event) => setState(event.target.value)} placeholder="D:\\infra\\terraform.tfstate" /></Field></>}
+    {view === 'inspect' && <Field label="State file" hint="Path inside the UI root printed in the terminal"><input required value={state} onChange={(event) => setState(event.target.value)} placeholder="D:\infra\terraform.tfstate" /></Field>}
+    {view === 'compare' && <><Field label="Before state" hint="Must be inside the UI path root"><input required value={before} onChange={(event) => setBefore(event.target.value)} placeholder="D:\infra\state-before.tfstate" /></Field><Field label="After state" hint="Must be inside the UI path root"><input required value={after} onChange={(event) => setAfter(event.target.value)} placeholder="D:\infra\state-after.tfstate" /></Field></>}
+    {view === 'rehearse' && <><Field label="Configuration directory" hint="Must be inside the UI path root"><input required value={config} onChange={(event) => setConfig(event.target.value)} placeholder="D:\infra" /></Field><Field label="State file" hint="Must be inside the UI path root"><input required value={state} onChange={(event) => setState(event.target.value)} placeholder="D:\infra\terraform.tfstate" /></Field></>}
 
-    {view === 'rehearse' && kind === 'migrate' && <div className="fieldGrid"><Field label="Terraform binary" hint="Must be inside the UI path root"><input required value={baselinePath} onChange={(event) => setBaselinePath(event.target.value)} placeholder="D:\\infra\\bin\\terraform.exe" /></Field><Field label="OpenTofu binary" hint="Must be inside the UI path root"><input required value={candidatePath} onChange={(event) => setCandidatePath(event.target.value)} placeholder="D:\\infra\\bin\\tofu.exe" /></Field></div>}
-    {view === 'rehearse' && kind === 'upgrade' && <><div className="fieldGrid"><EngineSelect label="Baseline engine" value={engine} onChange={setEngine} /><EngineSelect label="Candidate engine" value={candidateEngine} onChange={setCandidateEngine} /></div><div className="fieldGrid"><Field label="Baseline binary" hint="Must be inside the UI path root"><input required value={baselinePath} onChange={(event) => setBaselinePath(event.target.value)} placeholder="D:\\infra\\bin\\terraform.exe" /></Field><Field label="Candidate binary" hint="Must be inside the UI path root"><input required value={candidatePath} onChange={(event) => setCandidatePath(event.target.value)} placeholder="D:\\infra\\bin\\terraform-next.exe" /></Field></div></>}
+    {view === 'rehearse' && kind === 'migrate' && <div className="fieldGrid"><Field label="Terraform binary" hint="Must be inside the UI path root"><input required value={baselinePath} onChange={(event) => setBaselinePath(event.target.value)} placeholder="D:\infra\bin\terraform.exe" /></Field><Field label="OpenTofu binary" hint="Must be inside the UI path root"><input required value={candidatePath} onChange={(event) => setCandidatePath(event.target.value)} placeholder="D:\infra\bin\tofu.exe" /></Field></div>}
+    {view === 'rehearse' && kind === 'upgrade' && <><div className="fieldGrid"><EngineSelect label="Baseline engine" value={engine} onChange={setEngine} /><EngineSelect label="Candidate engine" value={candidateEngine} onChange={setCandidateEngine} /></div><div className="fieldGrid"><Field label="Baseline binary" hint="Must be inside the UI path root"><input required value={baselinePath} onChange={(event) => setBaselinePath(event.target.value)} placeholder="D:\infra\bin\terraform.exe" /></Field><Field label="Candidate binary" hint="Must be inside the UI path root"><input required value={candidatePath} onChange={(event) => setCandidatePath(event.target.value)} placeholder="D:\infra\bin\terraform-next.exe" /></Field></div></>}
 
     <button className="advancedToggle" type="button" onClick={() => setAdvanced((shown) => !shown)} aria-expanded={advanced}><Gauge size={17} />Analysis controls<CaretDown className={advanced ? 'rotated' : ''} size={15} /></button>
     {advanced && <div className="advancedPanel">

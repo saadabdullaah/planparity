@@ -16,9 +16,9 @@ function isComparison(value: AnalysisResult): value is StateComparison { return 
 
 function Results({ result, jobID }: { result: AnalysisResult; jobID: string }) {
   const exportResult = () => void downloadResult(jobID)
-  if (isInspection(result)) return <StateExplorer result={result} onExport={exportResult} />
-  if (isComparison(result)) return <ComparisonView result={result} onExport={exportResult} />
-  return <RehearsalView result={result} onExport={exportResult} />
+  if (isInspection(result)) return <StateExplorer key={jobID} result={result} onExport={exportResult} />
+  if (isComparison(result)) return <ComparisonView key={jobID} result={result} onExport={exportResult} />
+  return <RehearsalView key={jobID} result={result} onExport={exportResult} />
 }
 
 const waitingCopy: Record<Exclude<View, 'home'>, { title: string; copy: string }> = {
@@ -66,7 +66,7 @@ export default function App() {
     {view === 'home' ? <Home engines={engines} loadingEngines={loadingEngines} recent={recent} onNavigate={navigate} onOpenRecent={openRecent} /> : <main className="analysisPage">
       <div className="analysisBreadcrumb"><button type="button" onClick={() => navigate('home')}><ArrowLeft size={16} />Workbench</button><span>/</span><strong>{view}</strong></div>
       <div className="analysisLayout">
-        <aside className="formColumn"><AnalysisForm key={view} view={view} busy={analysis.busy} onSubmit={(path, payload) => { setOpenedRecent(null); void analysis.start(path, payload) }} /><div className="browserContract"><ShieldCheck size={19} weight="duotone" /><div><strong>Browser contract</strong><span>Sanitized results stay in memory. No local storage or indexed database.</span></div></div></aside>
+        <aside className="formColumn"><AnalysisForm key={view} view={view} busy={analysis.busy} onModeChange={() => { setOpenedRecent(null); analysis.reset() }} onSubmit={(path, payload) => { setOpenedRecent(null); void analysis.start(path, payload) }} /><div className="browserContract"><ShieldCheck size={19} weight="duotone" /><div><strong>Browser contract</strong><span>Sanitized results stay in memory. No local storage or indexed database.</span></div></div></aside>
         <div className="analysisOutput">
           <JobProgress analysis={analysis} />
           {result && resultJobID && <Results result={result} jobID={resultJobID} />}
