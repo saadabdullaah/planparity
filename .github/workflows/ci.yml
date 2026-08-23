@@ -51,7 +51,18 @@ jobs:
         run: go vet ./...
       - name: Test Go
         if: runner.os == 'Windows'
-        run: go test -coverprofile coverage.coverprofile ./...
+        shell: pwsh
+        run: |
+          $testOutput = & go test -coverprofile coverage.coverprofile ./... 2>&1
+          $testExitCode = $LASTEXITCODE
+          $testOutput | ForEach-Object { Write-Host $_ }
+          if ($testExitCode -ne 0) {
+            Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Value "## Windows Go test failure"
+            Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Value '```text'
+            $testOutput | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY
+            Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Value '```'
+            exit $testExitCode
+          }
       - name: Test Go with race detector
         if: runner.os == 'Linux'
         run: go test -race -coverprofile coverage.coverprofile ./...
