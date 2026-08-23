@@ -143,6 +143,34 @@
         "source_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
       }
     },
+    "resourceChange": {
+      "type": "object",
+      "required": ["address", "before", "after", "provider_changed", "schema_changed", "structure_changed", "dependencies_changed", "changed_fields"],
+      "properties": {
+        "address": { "type": "string" },
+        "before": { "$ref": "#/$defs/resource" },
+        "after": { "$ref": "#/$defs/resource" },
+        "provider_changed": { "type": "boolean" },
+        "schema_changed": { "type": "boolean" },
+        "structure_changed": { "type": "boolean" },
+        "dependencies_changed": { "type": "boolean" },
+        "changed_fields": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "probableMove": {
+      "type": "object",
+      "required": ["from_address", "to_address", "from", "to", "confidence", "signals", "ambiguous"],
+      "properties": {
+        "from_address": { "type": "string" },
+        "to_address": { "type": "string" },
+        "from": { "$ref": "#/$defs/resource" },
+        "to": { "$ref": "#/$defs/resource" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "signals": { "type": "array" },
+        "ambiguous": { "type": "boolean" },
+        "alternatives": { "type": "array", "items": { "type": "string" } }
+      }
+    },
     "stateComparison": {
       "type": "object",
       "required": ["schema_version", "before_hash", "after_hash", "added", "removed", "changed", "probable_moves", "provider_changes", "findings", "summary"],
@@ -152,8 +180,8 @@
         "after_hash": { "type": "string" },
         "added": { "type": "array", "items": { "$ref": "#/$defs/resource" } },
         "removed": { "type": "array", "items": { "$ref": "#/$defs/resource" } },
-        "changed": { "type": "array" },
-        "probable_moves": { "type": "array" },
+        "changed": { "type": "array", "items": { "$ref": "#/$defs/resourceChange" } },
+        "probable_moves": { "type": "array", "items": { "$ref": "#/$defs/probableMove" } },
         "provider_changes": { "type": "array" },
         "findings": { "type": "array", "items": { "$ref": "#/$defs/finding" } },
         "summary": { "type": "object" }

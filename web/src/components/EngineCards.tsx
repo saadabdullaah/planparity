@@ -1,21 +1,17 @@
+import { CheckCircle, Cpu, WarningCircle } from './icons'
 import type { EngineStatus } from '../api/types'
 
 export function EngineCards({ engines, loading }: { engines: EngineStatus[]; loading: boolean }) {
-  return (
-    <div className="engineGrid" aria-busy={loading}>
-      {loading && <div className="engineCard skeleton">Checking local engines…</div>}
-      {!loading && engines.map((engine) => (
-        <article className="engineCard" key={engine.kind}>
-          <div className="engineHead">
-            <span className={`availability ${engine.available ? 'online' : ''}`} />
-            <strong>{engine.name || (engine.kind === 'opentofu' ? 'OpenTofu' : 'Terraform')}</strong>
-            <span className="pill">{engine.available ? 'Ready' : 'Not found'}</span>
-          </div>
-          <p>{engine.available ? `${engine.version} · ${engine.platform}` : engine.error?.message ?? 'Configure an explicit binary path.'}</p>
-          {engine.path && <code title={engine.path}>{engine.path}</code>}
-        </article>
-      ))}
-    </div>
-  )
+  if (loading) return <div className="engineGrid" aria-busy="true"><div className="engineCard engineSkeleton"><span /><span /><span /></div><div className="engineCard engineSkeleton"><span /><span /><span /></div></div>
+  return <div className="engineGrid">
+    {engines.map((engine) => <article className={'engineCard ' + (engine.available ? 'engineReady' : 'engineMissing')} key={engine.kind}>
+      <div className="engineIdentity">
+        <span className="engineIcon"><Cpu size={23} weight="duotone" /></span>
+        <div><strong>{engine.name || (engine.kind === 'opentofu' ? 'OpenTofu' : 'Terraform')}</strong><span>{engine.available ? engine.version : 'Not detected'}</span></div>
+      </div>
+      <span className="engineBadge">{engine.available ? <CheckCircle size={16} weight="fill" /> : <WarningCircle size={16} weight="fill" />}{engine.available ? 'Ready' : 'Needs setup'}</span>
+      <p>{engine.available ? engine.platform : engine.error?.message ?? 'Configure an explicit binary path when you start an analysis.'}</p>
+      {engine.path && <code title={engine.path}>{engine.path}</code>}
+    </article>)}
+  </div>
 }
-

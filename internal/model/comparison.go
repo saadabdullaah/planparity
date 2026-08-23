@@ -12,12 +12,14 @@ type ComparisonSummary struct {
 
 // ResourceChange captures a matched resource's structural differences.
 type ResourceChange struct {
-	Address             string   `json:"address"`
-	ProviderChanged     bool     `json:"provider_changed"`
-	SchemaChanged       bool     `json:"schema_changed"`
-	StructureChanged    bool     `json:"structure_changed"`
-	DependenciesChanged bool     `json:"dependencies_changed"`
-	ChangedFields       []string `json:"changed_fields"`
+	Address             string           `json:"address"`
+	Before              ResourceInstance `json:"before"`
+	After               ResourceInstance `json:"after"`
+	ProviderChanged     bool             `json:"provider_changed"`
+	SchemaChanged       bool             `json:"schema_changed"`
+	StructureChanged    bool             `json:"structure_changed"`
+	DependenciesChanged bool             `json:"dependencies_changed"`
+	ChangedFields       []string         `json:"changed_fields"`
 }
 
 // MoveSignal is one scored feature in probable-move inference.
@@ -29,12 +31,14 @@ type MoveSignal struct {
 
 // ProbableMove links disappeared and appeared resource identities.
 type ProbableMove struct {
-	FromAddress  string       `json:"from_address"`
-	ToAddress    string       `json:"to_address"`
-	Confidence   float64      `json:"confidence"`
-	Signals      []MoveSignal `json:"signals"`
-	Ambiguous    bool         `json:"ambiguous"`
-	Alternatives []string     `json:"alternatives,omitempty"`
+	FromAddress  string           `json:"from_address"`
+	ToAddress    string           `json:"to_address"`
+	From         ResourceInstance `json:"from"`
+	To           ResourceInstance `json:"to"`
+	Confidence   float64          `json:"confidence"`
+	Signals      []MoveSignal     `json:"signals"`
+	Ambiguous    bool             `json:"ambiguous"`
+	Alternatives []string         `json:"alternatives,omitempty"`
 }
 
 // ProviderChange describes provider presence or schema-version changes.
