@@ -64,7 +64,7 @@ Linux:
 ./bin/planparity ui --terraform-bin ./labs/.bin/terraform
 ```
 
-Open the complete URL printed in the terminal. The fragment token is moved into memory and removed from browser history. Choose **Inspect**, enter the absolute path to the lab snapshot, and start the analysis.
+Open the complete URL printed in the terminal. The fragment token is moved into memory and removed from browser history. The terminal also prints the UI path root; state and configuration inputs must resolve inside that directory tree. Choose **Inspect**, enter the absolute path to the lab snapshot, and start the analysis.
 
 ## 5. Continue through the labs
 

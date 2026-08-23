@@ -63,7 +63,10 @@ planparity rehearse migrate \
 ```text
 planparity ui
 planparity ui --port 0 --open-browser=false
+planparity ui --path-root D:\infra
 ```
+
+The UI defaults its state/configuration path root to the current directory and prints the resolved root at startup. `--path-root` changes that boundary. Browser requests cannot use state or configuration paths outside it.
 
 The server binds to numeric loopback only. Port `0` selects an available port. The CLI prints a bootstrap URL containing an ephemeral token in its fragment; the UI moves the token into memory and removes the fragment from browser history.
 
@@ -73,4 +76,3 @@ The server binds to numeric loopback only. Port `0` selects an available port. T
 - `--output` writes the selected report instead of standard output.
 - Inputs are never modified, regardless of success or failure.
 - Failures avoid echoing engine output or state detail to the local API.
-

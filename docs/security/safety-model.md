@@ -46,7 +46,7 @@ Terminal text strips control and bidirectional formatting characters. Browser re
 - Requests are size-bounded and unknown JSON fields are rejected.
 - The UI uses no browser persistence, analytics, CDN, or remote database.
 
-The token grants local path authority to the operating-system user who started the process. Do not share it. Restart PlanParity if it may have escaped.
+The token grants authority to state and configuration files inside the UI path root printed at startup. The API normalizes each requested path and rejects traversal or links that resolve outside the root. Explicit engine binaries may live elsewhere under the operating-system account. Do not share the token. Restart PlanParity if it may have escaped.
 
 ## Interpretation boundary
 

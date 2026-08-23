@@ -106,10 +106,14 @@ func (server *Server) handleInspect(writer http.ResponseWriter, request *http.Re
 		writeAPIError(writer, http.StatusBadRequest, "INVALID_REQUEST", "engine and state are required.")
 		return
 	}
+	statePath, ok := server.authorizeAPIPath(writer, input.State)
+	if !ok {
+		return
+	}
 	server.startJob(writer, "inspect", func(ctx context.Context, emit func(string, string)) (any, error) {
 		emit("engine.detecting", "Detecting engine")
 		emit("state.normalizing", "Normalizing state")
-		result, err := server.service.Inspect(ctx, app.InspectRequest{Engine: kind, EnginePath: input.EnginePath, StatePath: input.State})
+		result, err := server.service.Inspect(ctx, app.InspectRequest{Engine: kind, EnginePath: input.EnginePath, StatePath: statePath})
 		if err == nil {
 			emit("report.finalizing", "Finalizing sanitized report")
 		}
@@ -135,11 +139,19 @@ func (server *Server) handleCompare(writer http.ResponseWriter, request *http.Re
 		writeAPIError(writer, http.StatusBadRequest, "INVALID_REQUEST", "probable_move_threshold must be between 0.5 and 1.")
 		return
 	}
+	beforePath, ok := server.authorizeAPIPath(writer, input.Before)
+	if !ok {
+		return
+	}
+	afterPath, ok := server.authorizeAPIPath(writer, input.After)
+	if !ok {
+		return
+	}
 	server.startJob(writer, "compare", func(ctx context.Context, emit func(string, string)) (any, error) {
 		emit("engine.detecting", "Detecting engine")
 		emit("state.normalizing", "Normalizing snapshots")
 		emit("comparison.running", "Comparing resources")
-		result, err := server.service.Compare(ctx, app.CompareRequest{Engine: kind, EnginePath: input.EnginePath, BeforePath: input.Before, AfterPath: input.After, ProbableMoveThreshold: threshold})
+		result, err := server.service.Compare(ctx, app.CompareRequest{Engine: kind, EnginePath: input.EnginePath, BeforePath: beforePath, AfterPath: afterPath, ProbableMoveThreshold: threshold})
 		if err == nil {
 			emit("report.finalizing", "Finalizing sanitized report")
 		}
@@ -157,11 +169,19 @@ func (server *Server) handlePlan(writer http.ResponseWriter, request *http.Reque
 		writeAPIError(writer, http.StatusBadRequest, "INVALID_REQUEST", "engine, config, and state are required.")
 		return
 	}
+	configPath, ok := server.authorizeAPIPath(writer, input.Config)
+	if !ok {
+		return
+	}
+	statePath, ok := server.authorizeAPIPath(writer, input.State)
+	if !ok {
+		return
+	}
 	server.startJob(writer, "rehearsal.plan", func(ctx context.Context, emit func(string, string)) (any, error) {
 		emit("workspace.preparing", "Preparing copied workspace")
 		emit("engine.initializing", "Initializing engine without backend")
 		emit("plan.generating", "Generating refresh-disabled plan")
-		return server.service.RehearsePlan(ctx, app.PlanRehearsalRequest{Engine: kind, EnginePath: input.EnginePath, ConfigPath: input.Config, StatePath: input.State, InheritProxy: input.InheritProxy, AllowRegistryAccess: input.AllowRegistryAccess})
+		return server.service.RehearsePlan(ctx, app.PlanRehearsalRequest{Engine: kind, EnginePath: input.EnginePath, ConfigPath: configPath, StatePath: statePath, InheritProxy: input.InheritProxy, AllowRegistryAccess: input.AllowRegistryAccess})
 	})
 }
 
@@ -176,11 +196,19 @@ func (server *Server) handleUpgrade(writer http.ResponseWriter, request *http.Re
 		writeAPIError(writer, http.StatusBadRequest, "INVALID_REQUEST", "upgrade request is incomplete.")
 		return
 	}
+	configPath, ok := server.authorizeAPIPath(writer, input.Config)
+	if !ok {
+		return
+	}
+	statePath, ok := server.authorizeAPIPath(writer, input.State)
+	if !ok {
+		return
+	}
 	server.startJob(writer, "rehearsal.upgrade", func(ctx context.Context, emit func(string, string)) (any, error) {
 		emit("workspace.preparing", "Preparing isolated baseline and candidate workspaces")
 		emit("plan.generating", "Generating baseline and candidate plans")
 		emit("comparison.running", "Comparing engine behavior")
-		return server.service.RehearseUpgrade(ctx, app.UpgradeRehearsalRequest{FromEngine: fromKind, FromEnginePath: input.FromEnginePath, ToEngine: toKind, ToEnginePath: input.ToEnginePath, ConfigPath: input.Config, StatePath: input.State, InheritProxy: input.InheritProxy, AllowRegistryAccess: input.AllowRegistryAccess})
+		return server.service.RehearseUpgrade(ctx, app.UpgradeRehearsalRequest{FromEngine: fromKind, FromEnginePath: input.FromEnginePath, ToEngine: toKind, ToEnginePath: input.ToEnginePath, ConfigPath: configPath, StatePath: statePath, InheritProxy: input.InheritProxy, AllowRegistryAccess: input.AllowRegistryAccess})
 	})
 }
 
@@ -193,12 +221,29 @@ func (server *Server) handleMigrate(writer http.ResponseWriter, request *http.Re
 		writeAPIError(writer, http.StatusBadRequest, "INVALID_REQUEST", "migration request is incomplete.")
 		return
 	}
+	configPath, ok := server.authorizeAPIPath(writer, input.Config)
+	if !ok {
+		return
+	}
+	statePath, ok := server.authorizeAPIPath(writer, input.State)
+	if !ok {
+		return
+	}
 	server.startJob(writer, "rehearsal.migrate", func(ctx context.Context, emit func(string, string)) (any, error) {
 		emit("workspace.preparing", "Preparing Terraform and OpenTofu workspaces")
 		emit("plan.generating", "Generating engine plans")
 		emit("comparison.running", "Comparing Terraform and OpenTofu")
-		return server.service.RehearseMigrate(ctx, app.MigrateRehearsalRequest{TerraformPath: input.TerraformPath, OpenTofuPath: input.OpenTofuPath, ConfigPath: input.Config, StatePath: input.State, InheritProxy: input.InheritProxy, AllowRegistryAccess: input.AllowRegistryAccess})
+		return server.service.RehearseMigrate(ctx, app.MigrateRehearsalRequest{TerraformPath: input.TerraformPath, OpenTofuPath: input.OpenTofuPath, ConfigPath: configPath, StatePath: statePath, InheritProxy: input.InheritProxy, AllowRegistryAccess: input.AllowRegistryAccess})
 	})
+}
+
+func (server *Server) authorizeAPIPath(writer http.ResponseWriter, input string) (string, bool) {
+	path, err := server.authorizeLocalPath(input)
+	if err != nil {
+		writeAPIError(writer, http.StatusBadRequest, "INVALID_PATH", "State and configuration paths must exist within the UI path root printed in the terminal.")
+		return "", false
+	}
+	return path, true
 }
 
 func (server *Server) startJob(writer http.ResponseWriter, kind string, function app.JobFunc) {

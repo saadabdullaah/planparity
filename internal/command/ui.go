@@ -14,7 +14,7 @@ import (
 func newUICommand() *cobra.Command {
 	var port int
 	var open bool
-	var terraformPath, tofuPath string
+	var terraformPath, tofuPath, pathRoot string
 	cmd := &cobra.Command{
 		Use:   "ui",
 		Short: "Start the authenticated localhost web interface",
@@ -22,7 +22,7 @@ func newUICommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			service := app.NewService(nil, 5*time.Minute)
 			server, err := localserver.New(service, localserver.Options{
-				Host: "127.0.0.1", Port: port, TerraformPath: terraformPath, OpenTofuPath: tofuPath,
+				Host: "127.0.0.1", Port: port, TerraformPath: terraformPath, OpenTofuPath: tofuPath, AllowedPathRoot: pathRoot,
 			})
 			if err != nil {
 				return err
@@ -31,7 +31,7 @@ func newUICommand() *cobra.Command {
 				return fmt.Errorf("listen on localhost: %w", err)
 			}
 			url := server.URL()
-			fmt.Fprintf(cmd.OutOrStdout(), "PlanParity UI\n\nListening: %s\nExecution mode: LOCAL-RESTRICTED\nResults: memory-only\n\nPress Ctrl+C to stop.\n", url)
+			fmt.Fprintf(cmd.OutOrStdout(), "PlanParity UI\n\nListening: %s\nPath root: %s\nExecution mode: LOCAL-RESTRICTED\nResults: memory-only\n\nPress Ctrl+C to stop.\n", url, server.PathRoot())
 			if open {
 				if err := openBrowser(url); err != nil {
 					fmt.Fprintf(cmd.ErrOrStderr(), "Browser could not be opened automatically: %v\n", err)
@@ -44,6 +44,7 @@ func newUICommand() *cobra.Command {
 	cmd.Flags().BoolVar(&open, "open-browser", true, "open the authenticated local URL")
 	cmd.Flags().StringVar(&terraformPath, "terraform-bin", "", "explicit Terraform executable path for system detection")
 	cmd.Flags().StringVar(&tofuPath, "tofu-bin", "", "explicit OpenTofu executable path for system detection")
+	cmd.Flags().StringVar(&pathRoot, "path-root", ".", "limit browser state and configuration paths to this directory tree")
 	return cmd
 }
 
