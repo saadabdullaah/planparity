@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"testing"
 
 	"github.com/saadabdullaah/planparity/internal/model"
@@ -25,7 +24,15 @@ func TestDiscoverAcceptsOnlyTheExpectedExecutableName(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.EqualFold(resolved, valid) {
+	resolvedInfo, err := os.Stat(resolved)
+	if err != nil {
+		t.Fatal(err)
+	}
+	validInfo, err := os.Stat(valid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !os.SameFile(resolvedInfo, validInfo) {
 		t.Fatalf("resolved path = %q, want %q", resolved, valid)
 	}
 	wrong := filepath.Join(root, "terraform-wrapper"+suffix)
