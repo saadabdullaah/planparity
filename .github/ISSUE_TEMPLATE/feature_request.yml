@@ -1,0 +1,27 @@
+name: Feature request
+description: Propose a scoped, local-first compatibility feature.
+title: "feat: "
+labels: [enhancement, needs-triage]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What compatibility question cannot PlanParity answer today?
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Proposed scope
+      description: Explain how this preserves the local-only, no-mutation safety boundary.
+    validations:
+      required: true
+  - type: checkboxes
+    id: non-goals
+    attributes:
+      label: Scope check
+      options:
+        - label: This does not require apply, hosted accounts, remote-state access, or automated remediation.
+          required: true
+

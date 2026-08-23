@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install frontend dependencies
+        working-directory: web
+        run: npm ci
+      - name: Lint frontend
+        working-directory: web
+        run: npm run lint
+      - name: Test frontend
+        working-directory: web
+        run: npm run test:run
+      - name: Build embedded frontend
+        working-directory: web
+        run: npm run build
+      - name: Check Go formatting
+        shell: bash
+        run: test -z "$(gofmt -l $(git ls-files '*.go'))"
+      - name: Vet Go
+        run: go vet ./...
+      - name: Test Go
+        if: runner.os == 'Windows'
+        run: go test -coverprofile coverage.coverprofile ./...
+      - name: Test Go with race detector
+        if: runner.os == 'Linux'
+        run: go test -race -coverprofile coverage.coverprofile ./...
+      - name: Build CLI
+        run: go build -trimpath ./cmd/planparity

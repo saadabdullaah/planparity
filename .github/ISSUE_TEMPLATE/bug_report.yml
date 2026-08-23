@@ -1,0 +1,44 @@
+name: Bug report
+description: Report a reproducible PlanParity problem without sharing sensitive state.
+title: "bug: "
+labels: [bug, needs-triage]
+body:
+  - type: markdown
+    attributes:
+      value: "Do not attach real state files, plan JSON, credentials, or raw engine output."
+  - type: textarea
+    id: behavior
+    attributes:
+      label: What happened?
+      description: Describe the observed and expected behavior using synthetic data.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: PlanParity version
+      placeholder: Output of planparity version
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options: [Windows, Linux]
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Synthetic reproduction
+      description: Provide minimal steps with secrets and values removed.
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Data safety
+      options:
+        - label: I removed credentials, attribute values, and private infrastructure identifiers.
+          required: true
+
