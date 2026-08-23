@@ -16,9 +16,9 @@ afterEach(() => vi.unstubAllGlobals())
 describe('App', () => {
   it('states the non-mutation safety contract and removes the token fragment', async () => {
     render(<App />)
-    expect(screen.getByText('No apply. No destroy. No state push.')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Evidence without authority.' })).toBeInTheDocument()
     expect(window.location.hash).toBe('')
-    expect(await screen.findByText('Engine readiness')).toBeInTheDocument()
+    expect(await screen.findByText('Your local toolchain, ready when you are.')).toBeInTheDocument()
   })
 
   it('opens the inspection workflow without persisting browser data', () => {
@@ -26,7 +26,7 @@ describe('App', () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: 'Inspect state' }))
     expect(screen.getByRole('heading', { name: 'Inspect a state snapshot' })).toBeInTheDocument()
-    expect(screen.getByText('Refresh disabled · backend disabled · no apply path')).toBeInTheDocument()
+    expect(screen.getByText('Refresh disabled. Backend disabled. No apply path.')).toBeInTheDocument()
     expect(storageSpy).not.toHaveBeenCalled()
   })
 })

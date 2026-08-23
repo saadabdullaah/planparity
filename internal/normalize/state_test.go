@@ -55,6 +55,9 @@ func TestStateNormalizesWithoutValues(t *testing.T) {
 	if strings.Contains(string(encoded), secretCanary) {
 		t.Fatal("secret canary escaped normalization")
 	}
+	if !strings.Contains(string(encoded), `"dependencies":[]`) {
+		t.Fatalf("empty dependency lists must remain arrays: %s", encoded)
+	}
 	for _, forbidden := range []string{`"value"`, `"values"`} {
 		if strings.Contains(string(encoded), forbidden) {
 			t.Fatalf("forbidden field %s escaped normalization", forbidden)

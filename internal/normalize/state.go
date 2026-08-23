@@ -124,7 +124,7 @@ func appendModule(snapshot *model.StateSnapshot, module rawModule, parent string
 		if err != nil {
 			return &Error{Code: ErrorInvalidJSON, Message: fmt.Sprintf("resource %q has invalid value structure", resource.Address), Cause: err}
 		}
-		dependencies := append([]string(nil), resource.DependsOn...)
+		dependencies := append([]string{}, resource.DependsOn...)
 		sort.Strings(dependencies)
 		mode := model.ResourceManaged
 		if resource.Mode == string(model.ResourceData) {

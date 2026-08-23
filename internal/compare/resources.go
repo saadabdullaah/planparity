@@ -83,7 +83,7 @@ func resourceMap(resources []model.ResourceInstance) map[string]model.ResourceIn
 }
 
 func compareMatchedResource(before, after model.ResourceInstance) (model.ResourceChange, bool) {
-	change := model.ResourceChange{Address: before.Address, ChangedFields: []string{}}
+	change := model.ResourceChange{Address: before.Address, Before: before, After: after, ChangedFields: []string{}}
 	if before.ProviderAddress != after.ProviderAddress {
 		change.ProviderChanged = true
 		change.ChangedFields = append(change.ChangedFields, "provider")
@@ -159,7 +159,7 @@ func inferMoves(removed, added []model.ResourceInstance, threshold float64) ([]m
 			}
 		}
 		ambiguous := len(alternatives) > 0 || usedAfter[best.to.Address]
-		move := model.ProbableMove{FromAddress: best.from.Address, ToAddress: best.to.Address, Confidence: roundConfidence(best.score), Signals: best.signals, Ambiguous: ambiguous, Alternatives: alternatives}
+		move := model.ProbableMove{FromAddress: best.from.Address, ToAddress: best.to.Address, From: best.from, To: best.to, Confidence: roundConfidence(best.score), Signals: best.signals, Ambiguous: ambiguous, Alternatives: alternatives}
 		moves = append(moves, move)
 		if !ambiguous {
 			usedBefore[best.from.Address] = true
