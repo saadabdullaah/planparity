@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { vi } from 'vitest'
 import App from './App'
 
@@ -21,9 +21,10 @@ describe('App', () => {
     expect(await screen.findByText('Your local toolchain, ready when you are.')).toBeInTheDocument()
   })
 
-  it('opens the inspection workflow without persisting browser data', () => {
+  it('opens the inspection workflow without persisting browser data', async () => {
     const storageSpy = vi.spyOn(Storage.prototype, 'setItem')
     render(<App />)
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).not.toBeInTheDocument())
     fireEvent.click(screen.getByRole('button', { name: 'Inspect state' }))
     expect(screen.getByRole('heading', { name: 'Inspect a state snapshot' })).toBeInTheDocument()
     expect(screen.getByText('Refresh disabled. Backend disabled. No apply path.')).toBeInTheDocument()
