@@ -66,7 +66,7 @@ planparity ui --port 0 --open-browser=false
 planparity ui --path-root D:\infra
 ```
 
-The UI defaults its state/configuration path root to the current directory and prints the resolved root at startup. `--path-root` changes that boundary. Browser requests cannot use state or configuration paths outside it.
+The UI defaults its browser-selected file root to the current directory and prints the resolved root at startup. `--path-root` changes that boundary. Browser requests cannot use state, configuration, or explicit engine paths outside it. Trusted engine binaries configured at startup with `--terraform-bin` or `--tofu-bin` are not constrained by this browser boundary.
 
 The server binds to numeric loopback only. Port `0` selects an available port. The CLI prints a bootstrap URL containing an ephemeral token in its fragment; the UI moves the token into memory and removes the fragment from browser history.
 

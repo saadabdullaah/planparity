@@ -98,7 +98,11 @@ func TestFailedJobNeverReturnsInternalDetail(t *testing.T) {
 	if err := os.WriteFile(statePath, []byte(`{"version":4}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	payloadBytes, err := json.Marshal(map[string]string{"engine": "terraform", "engine_path": `C:\missing\terraform.exe`, "state": statePath})
+	enginePath := filepath.Join(instance.PathRoot(), "terraform")
+	if err := os.WriteFile(enginePath, []byte("not an executable"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	payloadBytes, err := json.Marshal(map[string]string{"engine": "terraform", "engine_path": enginePath, "state": statePath})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -126,7 +130,7 @@ func TestFailedJobNeverReturnsInternalDetail(t *testing.T) {
 	if !strings.Contains(statusBody, `"status":"FAILED"`) {
 		t.Fatalf("job did not fail: %s", statusBody)
 	}
-	if strings.Contains(statusBody, canary) || strings.Contains(statusBody, "C:\\missing") {
+	if strings.Contains(statusBody, canary) || strings.Contains(statusBody, enginePath) {
 		t.Fatalf("job status leaked request detail: %s", statusBody)
 	}
 	result := request(instance, http.MethodGet, "/api/v1/results/"+response.JobID, instance.SessionToken(), nil)
@@ -174,6 +178,39 @@ func TestRejectsStatePathsOutsideTheAuthorizedRoot(t *testing.T) {
 	linked := request(instance, http.MethodPost, "/api/v1/inspect", instance.SessionToken(), bytes.NewReader(linkPayload))
 	if linked.Code != http.StatusBadRequest {
 		t.Fatalf("linked outside path status = %d: %s", linked.Code, linked.Body.String())
+	}
+}
+
+func TestRejectsExplicitEnginePathsOutsideTheAuthorizedRoot(t *testing.T) {
+	outer := t.TempDir()
+	allowed := filepath.Join(outer, "allowed")
+	if err := os.Mkdir(allowed, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	state := filepath.Join(allowed, "terraform.tfstate")
+	if err := os.WriteFile(state, []byte(`{"version":4}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	outsideEngine := filepath.Join(outer, "terraform")
+	if err := os.WriteFile(outsideEngine, []byte("not an executable"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	instance, err := New(app.NewService(nil, 100*time.Millisecond), Options{Host: "127.0.0.1", Port: 8765, AllowedPathRoot: allowed})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(instance.jobs.Close)
+
+	payload, err := json.Marshal(map[string]string{"engine": "terraform", "engine_path": outsideEngine, "state": state})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rejected := request(instance, http.MethodPost, "/api/v1/inspect", instance.SessionToken(), bytes.NewReader(payload))
+	if rejected.Code != http.StatusBadRequest || !strings.Contains(rejected.Body.String(), `"code":"INVALID_ENGINE_PATH"`) {
+		t.Fatalf("outside engine path status = %d: %s", rejected.Code, rejected.Body.String())
+	}
+	if strings.Contains(rejected.Body.String(), outsideEngine) {
+		t.Fatal("engine path rejection exposed the supplied path")
 	}
 }
 
