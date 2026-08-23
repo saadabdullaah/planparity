@@ -1,0 +1,36 @@
+# Local project context and portable toolchains; never commit or push.
+.planparity-local/
+
+# Go build and test output
+/bin/
+/dist/
+/coverage/
+*.coverprofile
+*.test
+
+# Frontend dependencies and generated assets
+/web/node_modules/
+/web/dist/
+/web/coverage/
+/web/playwright-report/
+/web/test-results/
+/internal/server/assets/ui/
+
+# Local runtime output
+/.planparity/
+/.cache/
+/tmp/
+*.tfplan
+planparity-report*.json
+
+# Terraform and OpenTofu managed working data. Published fixtures are explicit.
+**/.terraform/
+**/.tofu/
+
+# Editor and operating-system files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
+
