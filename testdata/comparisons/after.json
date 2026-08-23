@@ -1,0 +1,38 @@
+{
+  "format_version": "1.0",
+  "terraform_version": "1.12.1",
+  "values": {
+    "root_module": {
+      "child_modules": [
+        {
+          "address": "module.files",
+          "resources": [
+            {
+              "address": "module.files.local_file.application",
+              "mode": "managed",
+              "type": "local_file",
+              "name": "application",
+              "provider_name": "registry.terraform.io/hashicorp/local",
+              "schema_version": 0,
+              "values": { "content": "synthetic", "filename": "app.txt" },
+              "sensitive_values": {}
+            }
+          ]
+        }
+      ],
+      "resources": [
+        {
+          "address": "terraform_data.added",
+          "mode": "managed",
+          "type": "terraform_data",
+          "name": "added",
+          "provider_name": "terraform.io/builtin/terraform",
+          "schema_version": 0,
+          "values": { "input": "new", "output": "new" },
+          "sensitive_values": {}
+        }
+      ]
+    }
+  }
+}
+

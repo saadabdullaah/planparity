@@ -1,0 +1,31 @@
+{
+  "format_version": "1.0",
+  "terraform_version": "1.12.1",
+  "values": {
+    "root_module": {
+      "resources": [
+        {
+          "address": "local_file.application",
+          "mode": "managed",
+          "type": "local_file",
+          "name": "application",
+          "provider_name": "registry.terraform.io/hashicorp/local",
+          "schema_version": 0,
+          "values": { "content": "synthetic", "filename": "app.txt" },
+          "sensitive_values": {}
+        },
+        {
+          "address": "terraform_data.removed",
+          "mode": "managed",
+          "type": "terraform_data",
+          "name": "removed",
+          "provider_name": "terraform.io/builtin/terraform",
+          "schema_version": 0,
+          "values": { "input": "old", "output": "old" },
+          "sensitive_values": {}
+        }
+      ]
+    }
+  }
+}
+

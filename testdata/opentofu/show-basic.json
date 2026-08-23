@@ -1,0 +1,47 @@
+{
+  "format_version": "1.0",
+  "terraform_version": "1.12.1",
+  "values": {
+    "outputs": {
+      "generated_name": {
+        "sensitive": false,
+        "value": "demo-42",
+        "type": "string"
+      }
+    },
+    "root_module": {
+      "resources": [
+        {
+          "address": "random_id.suffix",
+          "mode": "managed",
+          "type": "random_id",
+          "name": "suffix",
+          "provider_name": "registry.opentofu.org/hashicorp/random",
+          "schema_version": 0,
+          "values": {
+            "byte_length": 4,
+            "prefix": "demo-",
+            "hex": "PP_SECRET_CANARY_NEVER_EXPOSE_7e53f9"
+          },
+          "sensitive_values": { "hex": true }
+        },
+        {
+          "address": "local_file.inventory",
+          "mode": "managed",
+          "type": "local_file",
+          "name": "inventory",
+          "provider_name": "registry.opentofu.org/hashicorp/local",
+          "schema_version": 0,
+          "values": {
+            "content": "PP_SECRET_CANARY_NEVER_EXPOSE_7e53f9",
+            "filename": "inventory.txt",
+            "file_permission": "0777"
+          },
+          "sensitive_values": { "content": true },
+          "depends_on": ["random_id.suffix"]
+        }
+      ]
+    }
+  }
+}
+
