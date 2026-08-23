@@ -68,16 +68,28 @@ func (executor ProcessExecutor) Execute(parent context.Context, request Request)
 	ctx, cancel := context.WithTimeout(parent, timeout)
 	defer cancel()
 
-	command := exec.CommandContext(ctx, request.Binary, arguments...)
+	command := exec.Command(request.Binary, arguments...)
 	command.Dir = request.WorkingDirectory
 	command.Env = request.Environment
+	configureProcess(command)
 	stdout := newLimitedBuffer(limit)
 	stderr := newLimitedBuffer(limit)
 	command.Stdout = stdout
 	command.Stderr = stderr
 
 	started := time.Now()
-	err = command.Run()
+	if err = command.Start(); err == nil {
+		processTree, _ := attachProcessTree(command)
+		defer closeProcessTree(processTree)
+		done := make(chan error, 1)
+		go func() { done <- command.Wait() }()
+		select {
+		case err = <-done:
+		case <-ctx.Done():
+			_ = terminateProcessTree(command, processTree)
+			err = <-done
+		}
+	}
 	result := Result{Stdout: stdout.Bytes(), Stderr: stderr.Bytes(), Duration: time.Since(started)}
 	if command.ProcessState != nil {
 		result.ExitCode = command.ProcessState.ExitCode()

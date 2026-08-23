@@ -21,3 +21,13 @@ func TestExecutionFailureDoesNotExposeEngineStderr(t *testing.T) {
 		t.Fatalf("public engine error exposed stderr: %s", public)
 	}
 }
+
+func TestSanitizeMessageStripsTerminalControls(t *testing.T) {
+	t.Parallel()
+	message := sanitizeMessage("safe\x1b[31m\r\nline\u202e", 512)
+	for _, forbidden := range []string{"\x1b", "\r", "\u202e"} {
+		if strings.Contains(message, forbidden) {
+			t.Fatalf("sanitized message retained %q: %q", forbidden, message)
+		}
+	}
+}

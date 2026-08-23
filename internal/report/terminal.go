@@ -3,6 +3,8 @@ package report
 import (
 	"fmt"
 	"io"
+	"strings"
+	"unicode"
 
 	"github.com/saadabdullaah/planparity/internal/model"
 )
@@ -16,7 +18,7 @@ func InspectionTerminal(writer io.Writer, result model.InspectionResult) error {
 	if _, err := fmt.Fprintln(writer); err != nil {
 		return err
 	}
-	if _, err := fmt.Fprintf(writer, "Engine:     %s %s\n", snapshot.Engine.Name, snapshot.Engine.Version); err != nil {
+	if _, err := fmt.Fprintf(writer, "Engine:     %s %s\n", terminalText(snapshot.Engine.Name), terminalText(snapshot.Engine.Version)); err != nil {
 		return err
 	}
 	if _, err := fmt.Fprintf(writer, "State hash: %s\n", snapshot.SourceHash); err != nil {
@@ -33,7 +35,7 @@ func InspectionTerminal(writer io.Writer, result model.InspectionResult) error {
 		return err
 	}
 	for _, resource := range snapshot.Resources {
-		if _, err := fmt.Fprintf(writer, "  %-10s %-12s %s\n", resource.Status, resource.Mode, resource.Address); err != nil {
+		if _, err := fmt.Fprintf(writer, "  %-10s %-12s %s\n", terminalText(string(resource.Status)), terminalText(string(resource.Mode)), terminalText(resource.Address)); err != nil {
 			return err
 		}
 	}
@@ -45,7 +47,7 @@ func InspectionTerminal(writer io.Writer, result model.InspectionResult) error {
 		return err
 	}
 	for _, finding := range result.Findings {
-		if _, err := fmt.Fprintf(writer, "  %s %s %s\n    %s\n", finding.Severity, finding.ID, finding.Title, finding.Explanation); err != nil {
+		if _, err := fmt.Fprintf(writer, "  %s %s %s\n    %s\n", terminalText(string(finding.Severity)), terminalText(finding.ID), terminalText(finding.Title), terminalText(finding.Explanation)); err != nil {
 			return err
 		}
 	}
@@ -74,7 +76,7 @@ func ComparisonTerminal(writer io.Writer, comparison model.StateComparison) erro
 			if move.Ambiguous {
 				ambiguity = " AMBIGUOUS"
 			}
-			if _, err := fmt.Fprintf(writer, "  %.0f%%%-10s %s -> %s\n", move.Confidence*100, ambiguity, move.FromAddress, move.ToAddress); err != nil {
+			if _, err := fmt.Fprintf(writer, "  %.0f%%%-10s %s -> %s\n", move.Confidence*100, ambiguity, terminalText(move.FromAddress), terminalText(move.ToAddress)); err != nil {
 				return err
 			}
 		}
@@ -87,7 +89,7 @@ func ComparisonTerminal(writer io.Writer, comparison model.StateComparison) erro
 		return err
 	}
 	for _, finding := range comparison.Findings {
-		if _, err := fmt.Fprintf(writer, "  %s %s %s\n    %s\n", finding.Severity, finding.ID, finding.Title, finding.Explanation); err != nil {
+		if _, err := fmt.Fprintf(writer, "  %s %s %s\n    %s\n", terminalText(string(finding.Severity)), terminalText(finding.ID), terminalText(finding.Title), terminalText(finding.Explanation)); err != nil {
 			return err
 		}
 	}
@@ -96,7 +98,7 @@ func ComparisonTerminal(writer io.Writer, comparison model.StateComparison) erro
 
 // RehearsalTerminal writes a safety-forward plan, upgrade, or parity result.
 func RehearsalTerminal(writer io.Writer, result model.RehearsalResult) error {
-	if _, err := fmt.Fprintf(writer, "PlanParity %s Rehearsal\n\n", result.Kind); err != nil {
+	if _, err := fmt.Fprintf(writer, "PlanParity %s Rehearsal\n\n", terminalText(string(result.Kind))); err != nil {
 		return err
 	}
 	if _, err := fmt.Fprintf(writer, "Execution mode: %s\n", result.ExecutionMode); err != nil {
@@ -113,7 +115,7 @@ func RehearsalTerminal(writer io.Writer, result model.RehearsalResult) error {
 		return err
 	}
 	for _, check := range result.Checks {
-		if _, err := fmt.Fprintf(writer, "  %-30s %s\n", check.Name, check.Verification); err != nil {
+		if _, err := fmt.Fprintf(writer, "  %-30s %s\n", terminalText(check.Name), terminalText(string(check.Verification))); err != nil {
 			return err
 		}
 	}
@@ -121,7 +123,7 @@ func RehearsalTerminal(writer io.Writer, result model.RehearsalResult) error {
 		return err
 	}
 	for _, finding := range result.Findings {
-		if _, err := fmt.Fprintf(writer, "  %s %s\n    %s\n", finding.Severity, finding.ID, finding.Title); err != nil {
+		if _, err := fmt.Fprintf(writer, "  %s %s\n    %s\n", terminalText(string(finding.Severity)), terminalText(finding.ID), terminalText(finding.Title)); err != nil {
 			return err
 		}
 	}
@@ -132,4 +134,13 @@ func RehearsalTerminal(writer io.Writer, result model.RehearsalResult) error {
 		return err
 	}
 	return nil
+}
+
+func terminalText(value string) string {
+	return strings.Map(func(character rune) rune {
+		if unicode.IsControl(character) || unicode.Is(unicode.Cf, character) {
+			return -1
+		}
+		return character
+	}, value)
 }

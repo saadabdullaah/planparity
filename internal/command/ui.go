@@ -48,14 +48,20 @@ func newUICommand() *cobra.Command {
 }
 
 func openBrowser(url string) error {
-	var command *exec.Cmd
-	switch runtime.GOOS {
-	case "windows":
-		command = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
-	case "linux":
-		command = exec.Command("xdg-open", url)
-	default:
-		return fmt.Errorf("automatic browser opening is unsupported on %s", runtime.GOOS)
+	command, err := browserCommand(runtime.GOOS, url)
+	if err != nil {
+		return err
 	}
 	return command.Start()
+}
+
+func browserCommand(goos, url string) (*exec.Cmd, error) {
+	switch goos {
+	case "windows":
+		return exec.Command("rundll32", "url.dll,FileProtocolHandler", url), nil
+	case "linux":
+		return exec.Command("xdg-open", url), nil
+	default:
+		return nil, fmt.Errorf("automatic browser opening is unsupported on %s", goos)
+	}
 }
