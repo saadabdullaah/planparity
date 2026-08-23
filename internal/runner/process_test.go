@@ -46,20 +46,51 @@ func TestLimitedBufferTruncates(t *testing.T) {
 	}
 }
 
-func TestProcessExecutorTerminatesAProcessTreeOnTimeout(t *testing.T) {
+func TestProcessExecutorTerminatesAProcessTreeOnCancellation(t *testing.T) {
 	heartbeat := filepath.Join(t.TempDir(), "heartbeat")
 	environment := append(os.Environ(),
 		"PLANPARITY_TEST_HELPER_MODE=parent",
 		"PLANPARITY_TEST_HEARTBEAT="+heartbeat,
 	)
-	executor := ProcessExecutor{Timeout: 2 * time.Second, OutputLimit: 1024}
+	executor := ProcessExecutor{Timeout: 15 * time.Second, OutputLimit: 1024}
+	ctx, cancel := context.WithCancel(context.Background())
+	result := make(chan error, 1)
+	go func() {
+		_, err := executor.Execute(ctx, Request{
+			Binary: os.Args[0], Operation: OperationVersion, Environment: environment,
+		})
+		result <- err
+	}()
+
+	readyBy := time.Now().Add(10 * time.Second)
+	for {
+		if _, err := os.Stat(heartbeat); err == nil {
+			break
+		}
+		select {
+		case err := <-result:
+			t.Fatalf("helper exited before creating heartbeat: %v", err)
+		default:
+		}
+		if time.Now().After(readyBy) {
+			cancel()
+			<-result
+			t.Fatal("child helper did not create heartbeat before readiness deadline")
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
+
 	started := time.Now()
-	_, err := executor.Execute(context.Background(), Request{
-		Binary: os.Args[0], Operation: OperationVersion, Environment: environment,
-	})
+	cancel()
+	var err error
+	select {
+	case err = <-result:
+	case <-time.After(5 * time.Second):
+		t.Fatal("process tree did not terminate after cancellation")
+	}
 	var executionError *ExecutionError
-	if !errors.As(err, &executionError) || !executionError.TimedOut {
-		t.Fatalf("expected timeout, got %v", err)
+	if !errors.As(err, &executionError) || executionError.TimedOut {
+		t.Fatalf("expected cancellation error, got %v", err)
 	}
 	if time.Since(started) > 5*time.Second {
 		t.Fatalf("termination took too long: %s", time.Since(started))
@@ -75,6 +106,18 @@ func TestProcessExecutorTerminatesAProcessTreeOnTimeout(t *testing.T) {
 		t.Fatal(readErr)
 	}
 	if string(before) != string(after) {
-		t.Fatalf("child process survived parent timeout: %q then %q", before, after)
+		t.Fatalf("child process survived parent cancellation: %q then %q", before, after)
+	}
+}
+
+func TestProcessExecutorMarksDeadlineExceeded(t *testing.T) {
+	environment := append(os.Environ(), "PLANPARITY_TEST_HELPER_MODE=parent")
+	executor := ProcessExecutor{Timeout: 100 * time.Millisecond, OutputLimit: 1024}
+	_, err := executor.Execute(context.Background(), Request{
+		Binary: os.Args[0], Operation: OperationVersion, Environment: environment,
+	})
+	var executionError *ExecutionError
+	if !errors.As(err, &executionError) || !executionError.TimedOut {
+		t.Fatalf("expected timeout, got %v", err)
 	}
 }

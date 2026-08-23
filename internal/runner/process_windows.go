@@ -89,6 +89,13 @@ func attachProcessTree(command *exec.Cmd) (*processTree, error) {
 }
 
 func terminateProcessTree(command *exec.Cmd, tree *processTree) error {
+	if command.Process != nil {
+		// taskkill walks the current descendant tree, including a child that may
+		// have started in the small interval before the parent joined the Job.
+		if err := exec.Command("taskkill.exe", "/PID", strconv.Itoa(command.Process.Pid), "/T", "/F").Run(); err == nil {
+			return nil
+		}
+	}
 	if tree != nil && tree.job != 0 {
 		terminated, _, terminateErr := terminateJobObject.Call(uintptr(tree.job), 1)
 		if terminated != 0 {
@@ -101,11 +108,7 @@ func terminateProcessTree(command *exec.Cmd, tree *processTree) error {
 	if command.Process == nil {
 		return nil
 	}
-	err := exec.Command("taskkill.exe", "/PID", strconv.Itoa(command.Process.Pid), "/T", "/F").Run()
-	if err != nil {
-		return command.Process.Kill()
-	}
-	return nil
+	return command.Process.Kill()
 }
 
 func closeProcessTree(tree *processTree) {
