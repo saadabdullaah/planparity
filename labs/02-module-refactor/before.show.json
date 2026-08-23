@@ -1,0 +1,21 @@
+{
+  "format_version": "1.0",
+  "terraform_version": "1.9.0-lab",
+  "values": {
+    "root_module": {
+      "resources": [
+        {
+          "address": "terraform_data.service",
+          "mode": "managed",
+          "type": "terraform_data",
+          "name": "service",
+          "provider_name": "terraform.io/builtin/terraform",
+          "schema_version": 0,
+          "values": { "input": { "name": "catalog", "tier": "internal" } },
+          "sensitive_values": {},
+          "depends_on": []
+        }
+      ]
+    }
+  }
+}

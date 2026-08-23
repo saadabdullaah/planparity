@@ -2,14 +2,18 @@
 
 PlanParity is a local compatibility laboratory for Terraform and OpenTofu. It inspects state, compares snapshots, and rehearses engine or provider transitions in isolated working copies before production state is exposed.
 
+![PlanParity connects two infrastructure interpretations through a local evidence graph](web/public/assets/planparity-hero.png)
+
 > [!IMPORTANT]
 > PlanParity never runs `apply`, `destroy`, or `state push`. It is an analysis tool, not an operating-system sandbox or a guarantee that a production change is safe.
 
 ## Project status
 
-PlanParity is under active pre-release development. The current target is the Phase 8 local API and state-explorer milestone described in the [roadmap](ROADMAP.md).
+The version-one implementation is complete for Windows and Linux. It includes the full CLI, responsive local UI, restricted rehearsal runner, security hardening, offline labs, documentation, and release automation described in the [roadmap](ROADMAP.md).
 
-The Phase 8 foundation is implemented as `v0.5.0-alpha.1`; see the [completion audit](docs/milestones/phase-8-audit.md) and [changelog](CHANGELOG.md).
+Verification evidence is recorded in the [v1.0.0 completion audit](docs/milestones/v1.0.0-audit.md).
+
+Start with the [five-minute quick start](docs/quickstart.md), then read the [safety model](docs/security/safety-model.md) before using real infrastructure files.
 
 ## Workflows
 
@@ -25,6 +29,8 @@ planparity ui
 ```
 
 The local UI is served at `http://127.0.0.1:8765` by default. PlanParity rejects non-loopback bind addresses.
+
+The interface provides searchable state/module/provider inventories, dependency and impact graphs, before/after comparison, probable-move evidence, plan and schema parity views, filtered findings, in-memory recent analyses, and sanitized JSON export.
 
 ## Safety model
 
@@ -62,6 +68,8 @@ Linux:
 
 Run all checks with `scripts/test.ps1` or `scripts/test.sh`.
 
+No-cloud demo fixtures are available in [labs](labs/README.md).
+
 ## Repository layout
 
 - `cmd/planparity`: executable entry point.
@@ -71,7 +79,7 @@ Run all checks with `scripts/test.ps1` or `scripts/test.sh`.
 - `testdata`: sanitized deterministic fixtures.
 - `docs`: architecture, commands, security, tutorials, and troubleshooting.
 
-See the [command reference](docs/commands.md), [local API guide](docs/local-api.md), and [troubleshooting guide](docs/troubleshooting.md).
+See the [documentation index](docs/README.md), [command reference](docs/commands.md), [local API guide](docs/local-api.md), and [troubleshooting guide](docs/troubleshooting.md).
 
 ## Contributing
 
