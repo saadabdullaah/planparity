@@ -1,0 +1,24 @@
+{
+  "format_version": "1.0",
+  "terraform_version": "1.9.0-lab",
+  "values": {
+    "outputs": {
+      "endpoint": { "sensitive": false, "type": "string", "value": "synthetic.invalid" }
+    },
+    "root_module": {
+      "resources": [
+        {
+          "address": "terraform_data.example",
+          "mode": "managed",
+          "type": "terraform_data",
+          "name": "example",
+          "provider_name": "terraform.io/builtin/terraform",
+          "schema_version": 0,
+          "values": { "input": { "purpose": "offline-lab", "secret": "PP_LAB_VALUE_MUST_NOT_APPEAR" } },
+          "sensitive_values": { "input": { "secret": true } },
+          "depends_on": []
+        }
+      ]
+    }
+  }
+}

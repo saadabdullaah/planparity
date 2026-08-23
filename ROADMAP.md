@@ -46,13 +46,22 @@ The roadmap is organized around independently useful, testable releases. Dates a
 
 - Localhost-only HTTP server, embedded UI, session token, security middleware, jobs, server-sent events, engine/health endpoints, inspection/comparison endpoints, navigation, and sanitized state explorer.
 
-## Later milestones
+## Phase 9 - Visualization and rehearsal UI (`v0.5.0`)
 
-- Phase 9: complete visual comparison and rehearsal UI (`v0.5.0`).
-- Phase 10: Windows/Linux and security hardening (`v0.9.0-beta.1`).
-- Phase 11: documentation, four local labs, and stable release (`v1.0.0`).
+- Complete state, comparison, probable-move, dependency/impact graph, rehearsal, parity, findings, export, responsive, and accessible interface.
+
+## Phase 10 - Windows/Linux and security hardening (`v0.9.0-beta.1`)
+
+- Cross-platform path, executable, process-tree, temporary workspace, link, permission, output-limit, environment, injection, and secret-boundary coverage.
+
+## Phase 11 - Documentation, labs, and stable release (`v1.0.0`)
+
+- Complete installation, build, workflow, UI, safety, limitations, troubleshooting, architecture, and contribution documentation.
+- Four deterministic offline labs covering inspection, module moves, upgrade replacement, and Terraform/OpenTofu mismatch.
+- Reproducible Windows/Linux release archives, checksums, and automated GitHub releases.
+
+All version-one phase deliverables are implemented. Future work must remain outside the frozen version-one scope unless it replaces an existing commitment.
 
 ## Version-one non-goals
 
 No apply/remediation, hosted service, remote-state integration, accounts, external database, Terraform/OpenTofu downloading, CI product integration, policy language, plugins, Terragrunt, other IaC engines, AI analysis, or macOS support.
-

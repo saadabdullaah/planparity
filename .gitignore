@@ -15,6 +15,7 @@
 /web/playwright-report/
 /web/test-results/
 /internal/server/assets/ui/
+/labs/.bin/
 
 # Local runtime output
 /.planparity/
@@ -33,4 +34,3 @@ planparity-report*.json
 .DS_Store
 Thumbs.db
 *.swp
-

@@ -27,7 +27,7 @@ jobs:
         with:
           go-version-file: go.mod
           cache-dependency-path: go.sum
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm
@@ -57,3 +57,9 @@ jobs:
         run: go test -race -coverprofile coverage.coverprofile ./...
       - name: Build CLI
         run: go build -trimpath ./cmd/planparity
+      - name: Test offline labs on Windows
+        if: runner.os == 'Windows'
+        run: .\scripts\test-labs.ps1
+      - name: Test offline labs on Linux
+        if: runner.os == 'Linux'
+        run: ./scripts/test-labs.sh
