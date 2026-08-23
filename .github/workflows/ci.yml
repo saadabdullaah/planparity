@@ -61,6 +61,9 @@ jobs:
             Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Value '```text'
             $testOutput | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY
             Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Value '```'
+            $failureTail = (($testOutput | Select-Object -Last 80) -join "`n")
+            $failureTail = $failureTail.Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
+            Write-Host "::error title=Windows Go test failure::$failureTail"
             exit $testExitCode
           }
       - name: Test Go with race detector
