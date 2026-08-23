@@ -120,6 +120,36 @@ func TestPrepareWorkspaceRejectsLinkedInputs(t *testing.T) {
 	}
 }
 
+func TestPrepareWorkspaceWithinRootRejectsEscapes(t *testing.T) {
+	root := t.TempDir()
+	config := filepath.Join(root, "config")
+	if err := os.Mkdir(config, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(config, "main.tf"), []byte("terraform {}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	state := filepath.Join(root, "state.tfstate")
+	if err := os.WriteFile(state, []byte("synthetic-state"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	workspace, err := PrepareWorkspaceWithinRoot(config, state, root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := workspace.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	outside := filepath.Join(t.TempDir(), "outside.tfstate")
+	if err := os.WriteFile(outside, []byte("synthetic-state"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := PrepareWorkspaceWithinRoot(config, outside, root); err == nil || !strings.Contains(err.Error(), "outside") {
+		t.Fatalf("outside state path was not rejected: %v", err)
+	}
+}
+
 func TestFileHashRejectsOversizedInputWithoutReadingIt(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "oversized.tfstate")
 	file, err := os.Create(path)

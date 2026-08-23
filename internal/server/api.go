@@ -181,7 +181,7 @@ func (server *Server) handlePlan(writer http.ResponseWriter, request *http.Reque
 		emit("workspace.preparing", "Preparing copied workspace")
 		emit("engine.initializing", "Initializing engine without backend")
 		emit("plan.generating", "Generating refresh-disabled plan")
-		return server.service.RehearsePlan(ctx, app.PlanRehearsalRequest{Engine: kind, EnginePath: input.EnginePath, ConfigPath: configPath, StatePath: statePath, InheritProxy: input.InheritProxy, AllowRegistryAccess: input.AllowRegistryAccess})
+		return server.service.RehearsePlan(ctx, app.PlanRehearsalRequest{Engine: kind, EnginePath: input.EnginePath, ConfigPath: configPath, StatePath: statePath, InheritProxy: input.InheritProxy, AllowRegistryAccess: input.AllowRegistryAccess, PathRoot: server.PathRoot()})
 	})
 }
 
@@ -208,7 +208,7 @@ func (server *Server) handleUpgrade(writer http.ResponseWriter, request *http.Re
 		emit("workspace.preparing", "Preparing isolated baseline and candidate workspaces")
 		emit("plan.generating", "Generating baseline and candidate plans")
 		emit("comparison.running", "Comparing engine behavior")
-		return server.service.RehearseUpgrade(ctx, app.UpgradeRehearsalRequest{FromEngine: fromKind, FromEnginePath: input.FromEnginePath, ToEngine: toKind, ToEnginePath: input.ToEnginePath, ConfigPath: configPath, StatePath: statePath, InheritProxy: input.InheritProxy, AllowRegistryAccess: input.AllowRegistryAccess})
+		return server.service.RehearseUpgrade(ctx, app.UpgradeRehearsalRequest{FromEngine: fromKind, FromEnginePath: input.FromEnginePath, ToEngine: toKind, ToEnginePath: input.ToEnginePath, ConfigPath: configPath, StatePath: statePath, InheritProxy: input.InheritProxy, AllowRegistryAccess: input.AllowRegistryAccess, PathRoot: server.PathRoot()})
 	})
 }
 
@@ -233,7 +233,7 @@ func (server *Server) handleMigrate(writer http.ResponseWriter, request *http.Re
 		emit("workspace.preparing", "Preparing Terraform and OpenTofu workspaces")
 		emit("plan.generating", "Generating engine plans")
 		emit("comparison.running", "Comparing Terraform and OpenTofu")
-		return server.service.RehearseMigrate(ctx, app.MigrateRehearsalRequest{TerraformPath: input.TerraformPath, OpenTofuPath: input.OpenTofuPath, ConfigPath: configPath, StatePath: statePath, InheritProxy: input.InheritProxy, AllowRegistryAccess: input.AllowRegistryAccess})
+		return server.service.RehearseMigrate(ctx, app.MigrateRehearsalRequest{TerraformPath: input.TerraformPath, OpenTofuPath: input.OpenTofuPath, ConfigPath: configPath, StatePath: statePath, InheritProxy: input.InheritProxy, AllowRegistryAccess: input.AllowRegistryAccess, PathRoot: server.PathRoot()})
 	})
 }
 
