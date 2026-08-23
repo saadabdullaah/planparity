@@ -122,6 +122,7 @@ type PlanRehearsalRequest struct {
 	StatePath           string
 	InheritProxy        bool
 	AllowRegistryAccess bool
+	PathRoot            string
 }
 
 // UpgradeRehearsalRequest compares two explicit engine versions over identical inputs.
@@ -134,6 +135,7 @@ type UpgradeRehearsalRequest struct {
 	StatePath           string
 	InheritProxy        bool
 	AllowRegistryAccess bool
+	PathRoot            string
 }
 
 // MigrateRehearsalRequest compares Terraform and OpenTofu over identical inputs.
@@ -144,6 +146,7 @@ type MigrateRehearsalRequest struct {
 	StatePath           string
 	InheritProxy        bool
 	AllowRegistryAccess bool
+	PathRoot            string
 }
 
 // Inspect verifies input immutability and immediately normalizes raw engine output.
@@ -192,7 +195,13 @@ func (service *Service) Compare(ctx context.Context, request CompareRequest) (mo
 
 // RehearsePlan runs an engine only against copied inputs and returns sanitized output.
 func (service *Service) RehearsePlan(ctx context.Context, request PlanRehearsalRequest) (result model.RehearsalResult, returnErr error) {
-	workspace, err := runner.PrepareWorkspace(request.ConfigPath, request.StatePath)
+	var workspace *runner.PreparedWorkspace
+	var err error
+	if request.PathRoot == "" {
+		workspace, err = runner.PrepareWorkspace(request.ConfigPath, request.StatePath)
+	} else {
+		workspace, err = runner.PrepareWorkspaceWithinRoot(request.ConfigPath, request.StatePath, request.PathRoot)
+	}
 	if err != nil {
 		return result, err
 	}
@@ -282,14 +291,14 @@ func (service *Service) RehearsePlan(ctx context.Context, request PlanRehearsalR
 func (service *Service) RehearseUpgrade(ctx context.Context, request UpgradeRehearsalRequest) (model.RehearsalResult, error) {
 	baseline, err := service.RehearsePlan(ctx, PlanRehearsalRequest{
 		Engine: request.FromEngine, EnginePath: request.FromEnginePath, ConfigPath: request.ConfigPath, StatePath: request.StatePath,
-		InheritProxy: request.InheritProxy, AllowRegistryAccess: request.AllowRegistryAccess,
+		InheritProxy: request.InheritProxy, AllowRegistryAccess: request.AllowRegistryAccess, PathRoot: request.PathRoot,
 	})
 	if err != nil {
 		return model.RehearsalResult{}, fmt.Errorf("baseline rehearsal: %w", err)
 	}
 	candidate, err := service.RehearsePlan(ctx, PlanRehearsalRequest{
 		Engine: request.ToEngine, EnginePath: request.ToEnginePath, ConfigPath: request.ConfigPath, StatePath: request.StatePath,
-		InheritProxy: request.InheritProxy, AllowRegistryAccess: request.AllowRegistryAccess,
+		InheritProxy: request.InheritProxy, AllowRegistryAccess: request.AllowRegistryAccess, PathRoot: request.PathRoot,
 	})
 	if err != nil {
 		return model.RehearsalResult{}, fmt.Errorf("candidate rehearsal: %w", err)
@@ -301,14 +310,14 @@ func (service *Service) RehearseUpgrade(ctx context.Context, request UpgradeRehe
 func (service *Service) RehearseMigrate(ctx context.Context, request MigrateRehearsalRequest) (model.RehearsalResult, error) {
 	baseline, err := service.RehearsePlan(ctx, PlanRehearsalRequest{
 		Engine: model.EngineTerraform, EnginePath: request.TerraformPath, ConfigPath: request.ConfigPath, StatePath: request.StatePath,
-		InheritProxy: request.InheritProxy, AllowRegistryAccess: request.AllowRegistryAccess,
+		InheritProxy: request.InheritProxy, AllowRegistryAccess: request.AllowRegistryAccess, PathRoot: request.PathRoot,
 	})
 	if err != nil {
 		return model.RehearsalResult{}, fmt.Errorf("Terraform rehearsal: %w", err)
 	}
 	candidate, err := service.RehearsePlan(ctx, PlanRehearsalRequest{
 		Engine: model.EngineOpenTofu, EnginePath: request.OpenTofuPath, ConfigPath: request.ConfigPath, StatePath: request.StatePath,
-		InheritProxy: request.InheritProxy, AllowRegistryAccess: request.AllowRegistryAccess,
+		InheritProxy: request.InheritProxy, AllowRegistryAccess: request.AllowRegistryAccess, PathRoot: request.PathRoot,
 	})
 	if err != nil {
 		return model.RehearsalResult{}, fmt.Errorf("OpenTofu rehearsal: %w", err)
