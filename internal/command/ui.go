@@ -1,0 +1,61 @@
+package command
+
+import (
+	"fmt"
+	"os/exec"
+	"runtime"
+	"time"
+
+	"github.com/saadabdullaah/planparity/internal/app"
+	localserver "github.com/saadabdullaah/planparity/internal/server"
+	"github.com/spf13/cobra"
+)
+
+func newUICommand() *cobra.Command {
+	var port int
+	var open bool
+	var terraformPath, tofuPath string
+	cmd := &cobra.Command{
+		Use:   "ui",
+		Short: "Start the authenticated localhost web interface",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			service := app.NewService(nil, 5*time.Minute)
+			server, err := localserver.New(service, localserver.Options{
+				Host: "127.0.0.1", Port: port, TerraformPath: terraformPath, OpenTofuPath: tofuPath,
+			})
+			if err != nil {
+				return err
+			}
+			if err := server.Listen(); err != nil {
+				return fmt.Errorf("listen on localhost: %w", err)
+			}
+			url := server.URL()
+			fmt.Fprintf(cmd.OutOrStdout(), "PlanParity UI\n\nListening: %s\nExecution mode: LOCAL-RESTRICTED\nResults: memory-only\n\nPress Ctrl+C to stop.\n", url)
+			if open {
+				if err := openBrowser(url); err != nil {
+					fmt.Fprintf(cmd.ErrOrStderr(), "Browser could not be opened automatically: %v\n", err)
+				}
+			}
+			return server.Serve(cmd.Context())
+		},
+	}
+	cmd.Flags().IntVar(&port, "port", 8765, "localhost TCP port (0 selects an available port)")
+	cmd.Flags().BoolVar(&open, "open-browser", true, "open the authenticated local URL")
+	cmd.Flags().StringVar(&terraformPath, "terraform-bin", "", "explicit Terraform executable path for system detection")
+	cmd.Flags().StringVar(&tofuPath, "tofu-bin", "", "explicit OpenTofu executable path for system detection")
+	return cmd
+}
+
+func openBrowser(url string) error {
+	var command *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		command = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
+	case "linux":
+		command = exec.Command("xdg-open", url)
+	default:
+		return fmt.Errorf("automatic browser opening is unsupported on %s", runtime.GOOS)
+	}
+	return command.Start()
+}
