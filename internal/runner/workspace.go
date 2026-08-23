@@ -13,7 +13,10 @@ import (
 	"strings"
 )
 
-const maxCopiedFileSize = 256 << 20 // 256 MiB.
+const (
+	maxCopiedFileSize  = 256 << 20 // 256 MiB.
+	maxCopiedFileCount = 100_000
+)
 
 // PreparedWorkspace is an isolated copy used for rehearsal execution.
 type PreparedWorkspace struct {
@@ -129,6 +132,7 @@ func (workspace *PreparedWorkspace) Close() error {
 }
 
 func copyConfiguration(source, destination, excludedState string) error {
+	fileCount := 0
 	return filepath.WalkDir(source, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
@@ -166,6 +170,10 @@ func copyConfiguration(source, destination, excludedState string) error {
 		}
 		if !info.Mode().IsRegular() {
 			return fmt.Errorf("configuration entry %q is not a regular file", relative)
+		}
+		fileCount++
+		if fileCount > maxCopiedFileCount {
+			return fmt.Errorf("configuration exceeds the %d file copy limit", maxCopiedFileCount)
 		}
 		if info.Size() > maxCopiedFileSize {
 			return fmt.Errorf("configuration file %q exceeds the copy limit", relative)
@@ -209,6 +217,16 @@ func copyFile(source, destination string, mode fs.FileMode) error {
 
 // FileHash returns a SHA-256 hash without retaining file data.
 func FileHash(path string) (string, error) {
+	info, err := os.Lstat(path)
+	if err != nil {
+		return "", err
+	}
+	if !info.Mode().IsRegular() {
+		return "", errors.New("hash input must be a regular file")
+	}
+	if info.Size() > maxCopiedFileSize {
+		return "", fmt.Errorf("file exceeds the %d byte input limit", maxCopiedFileSize)
+	}
 	file, err := os.Open(path)
 	if err != nil {
 		return "", err
@@ -224,6 +242,7 @@ func FileHash(path string) (string, error) {
 // TreeHash deterministically hashes regular file paths, modes, and contents.
 func TreeHash(root string) (string, error) {
 	entries := make([]string, 0)
+	fileCount := 0
 	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
@@ -246,6 +265,13 @@ func TreeHash(root string) (string, error) {
 		}
 		if !info.Mode().IsRegular() {
 			return fmt.Errorf("configuration entry %q is not regular", path)
+		}
+		fileCount++
+		if fileCount > maxCopiedFileCount {
+			return fmt.Errorf("configuration exceeds the %d file input limit", maxCopiedFileCount)
+		}
+		if info.Size() > maxCopiedFileSize {
+			return fmt.Errorf("configuration file %q exceeds the input limit", path)
 		}
 		relative, err := filepath.Rel(root, path)
 		if err != nil {

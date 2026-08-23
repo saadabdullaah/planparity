@@ -45,7 +45,7 @@ func executionFailure(operation string, err error) error {
 func sanitizeMessage(value string, limit int) string {
 	var builder strings.Builder
 	for _, r := range value {
-		if r == '\n' || r == '\t' || (!unicode.IsControl(r) && r != '\x1b') {
+		if (r == '\n' || r == '\t' || !unicode.IsControl(r)) && !unicode.Is(unicode.Cf, r) && r != '\x1b' {
 			builder.WriteRune(r)
 		}
 		if builder.Len() >= limit {

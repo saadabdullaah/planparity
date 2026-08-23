@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -26,6 +27,19 @@ func TestAllowlistContainsNoMutatingCommands(t *testing.T) {
 				t.Fatalf("%s constructed forbidden arguments %q", request.Operation, arguments)
 			}
 		}
+	}
+}
+
+func TestArgumentsKeepHostilePathsAsSingleArguments(t *testing.T) {
+	t.Parallel()
+	path := `C:\state files\snapshot.tfstate; apply -auto-approve`
+	arguments, err := Arguments(Request{Operation: OperationShow, TargetPath: path})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"show", "-json", path}
+	if !reflect.DeepEqual(arguments, want) {
+		t.Fatalf("arguments = %#v, want %#v", arguments, want)
 	}
 }
 
