@@ -34,7 +34,7 @@ type PreparedWorkspace struct {
 
 // PrepareWorkspace copies configuration and state without following links.
 func PrepareWorkspace(configPath, statePath string) (*PreparedWorkspace, error) {
-	return prepareWorkspace(configPath, statePath, "")
+	return prepareWorkspace(configPath, statePath)
 }
 
 // PrepareWorkspaceWithinRoot copies browser-selected inputs only after proving
@@ -43,26 +43,22 @@ func PrepareWorkspaceWithinRoot(configPath, statePath, pathRoot string) (*Prepar
 	if pathRoot == "" {
 		return nil, errors.New("authorized path root is required")
 	}
-	return prepareWorkspace(configPath, statePath, pathRoot)
+	root, err := filepath.Abs(pathRoot)
+	if err != nil {
+		return nil, errors.New("authorized path root is invalid")
+	}
+	configRelative, err := filepath.Rel(root, configPath)
+	if err != nil || !filepath.IsLocal(configRelative) {
+		return nil, errors.New("configuration path is outside the authorized root")
+	}
+	stateRelative, err := filepath.Rel(root, statePath)
+	if err != nil || !filepath.IsLocal(stateRelative) {
+		return nil, errors.New("state path is outside the authorized root")
+	}
+	return prepareWorkspace(filepath.Join(root, configRelative), filepath.Join(root, stateRelative))
 }
 
-func prepareWorkspace(configPath, statePath, pathRoot string) (*PreparedWorkspace, error) {
-	if pathRoot != "" {
-		root, err := filepath.Abs(pathRoot)
-		if err != nil {
-			return nil, errors.New("authorized path root is invalid")
-		}
-		configRelative, err := filepath.Rel(root, configPath)
-		if err != nil || !filepath.IsLocal(configRelative) {
-			return nil, errors.New("configuration path is outside the authorized root")
-		}
-		stateRelative, err := filepath.Rel(root, statePath)
-		if err != nil || !filepath.IsLocal(stateRelative) {
-			return nil, errors.New("state path is outside the authorized root")
-		}
-		configPath = filepath.Join(root, configRelative)
-		statePath = filepath.Join(root, stateRelative)
-	}
+func prepareWorkspace(configPath, statePath string) (*PreparedWorkspace, error) {
 	config, err := filepath.Abs(configPath)
 	if err != nil {
 		return nil, fmt.Errorf("resolve configuration: %w", err)
