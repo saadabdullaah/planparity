@@ -4,6 +4,8 @@ import type { InspectionResult, ResourceInstance } from '../api/types'
 import { Findings } from '../components/Findings'
 
 const DependencyGraph = lazy(() => import('./DependencyGraph'))
+const moduleDisplayLimit = 250
+const resourceBatchSize = 250
 
 type StateTab = 'overview' | 'resources' | 'graph' | 'findings'
 
@@ -17,11 +19,12 @@ function ResourceRow({ resource }: { resource: ResourceInstance }) {
 
 function ModuleTree({ modules }: { modules: InspectionResult['snapshot']['modules'] }) {
   if (!modules.length) return <div className="emptyState compactEmpty"><TreeStructure size={24} /><strong>Root module only</strong></div>
-  return <div className="moduleTree">{modules.map((module) => {
+  const visibleModules = modules.slice(0, moduleDisplayLimit)
+  return <div className="moduleTree">{visibleModules.map((module) => {
     const label = module.address || 'root'
     const depth = label === 'root' ? 0 : label.split('.').filter((part) => part === 'module').length
     return <div style={{ '--tree-depth': depth } as React.CSSProperties} key={label}><span className="treeRail" /><Package size={17} weight={depth ? 'regular' : 'fill'} /><code>{label}</code><span>{module.resource_count}</span></div>
-  })}</div>
+  })}{modules.length > visibleModules.length && <p className="progressiveNotice">Showing the first {visibleModules.length.toLocaleString()} of {modules.length.toLocaleString()} modules.</p>}</div>
 }
 
 const tabs: Array<{ id: StateTab; label: string }> = [
@@ -36,6 +39,7 @@ export function StateExplorer({ result, onExport }: { result: InspectionResult; 
   const [query, setQuery] = useState('')
   const [status, setStatus] = useState('ALL')
   const [provider, setProvider] = useState('ALL')
+  const [visibleLimit, setVisibleLimit] = useState(resourceBatchSize)
   const snapshot = result.snapshot
   const providers = useMemo(() => snapshot.providers.map((item) => item.address), [snapshot.providers])
   const resources = useMemo(() => {
@@ -46,6 +50,7 @@ export function StateExplorer({ result, onExport }: { result: InspectionResult; 
       return !needle || [resource.address, resource.provider_address, resource.resource_type].join(' ').toLowerCase().includes(needle)
     })
   }, [provider, query, snapshot.resources, status])
+  const visibleResources = resources.slice(0, visibleLimit)
 
   return <div className="resultStack">
     <div className="resultTitle"><div><span className="resultKicker"><Database size={18} weight="duotone" />Sanitized inspection</span><h2>State explorer</h2><p>{snapshot.engine.name} {snapshot.engine.version} interpreted this snapshot.</p></div><button type="button" className="button buttonSecondary" onClick={onExport}><DownloadSimple size={17} weight="bold" />Export JSON</button></div>
@@ -62,9 +67,10 @@ export function StateExplorer({ result, onExport }: { result: InspectionResult; 
     </div>}
 
     {activeTab === 'resources' && <section className="tabPanel resultPanel">
-      <div className="resourceToolbar"><div><h3>Resource inventory</h3><p>No attribute values are included.</p></div><div className="resourceFilters"><label className="searchField"><MagnifyingGlass size={17} /><span className="srOnly">Search resources</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search address, type, or provider" /></label><select aria-label="Filter resources by status" value={status} onChange={(event) => setStatus(event.target.value)}><option value="ALL">All statuses</option>{[...new Set(snapshot.resources.map((item) => item.status))].sort().map((item) => <option value={item} key={item}>{item}</option>)}</select><select aria-label="Filter resources by provider" value={provider} onChange={(event) => setProvider(event.target.value)}><option value="ALL">All providers</option>{providers.map((item) => <option value={item} key={item}>{item}</option>)}</select></div></div>
+      <div className="resourceToolbar"><div><h3>Resource inventory</h3><p>No attribute values are included.</p></div><div className="resourceFilters"><label className="searchField"><MagnifyingGlass size={17} /><span className="srOnly">Search resources</span><input value={query} onChange={(event) => { setQuery(event.target.value); setVisibleLimit(resourceBatchSize) }} placeholder="Search address, type, or provider" /></label><select aria-label="Filter resources by status" value={status} onChange={(event) => { setStatus(event.target.value); setVisibleLimit(resourceBatchSize) }}><option value="ALL">All statuses</option>{[...new Set(snapshot.resources.map((item) => item.status))].sort().map((item) => <option value={item} key={item}>{item}</option>)}</select><select aria-label="Filter resources by provider" value={provider} onChange={(event) => { setProvider(event.target.value); setVisibleLimit(resourceBatchSize) }}><option value="ALL">All providers</option>{providers.map((item) => <option value={item} key={item}>{item}</option>)}</select></div></div>
       <div className="tableSummary">{resources.length} of {snapshot.resources.length} resources</div>
-      <div className="tableWrap"><table><thead><tr><th>Address</th><th>Mode</th><th>Provider</th><th>Status</th><th>Keys</th><th>Dependencies</th></tr></thead><tbody>{resources.map((resource) => <ResourceRow key={resource.address} resource={resource} />)}</tbody></table></div>
+      <div className="tableWrap"><table><thead><tr><th>Address</th><th>Mode</th><th>Provider</th><th>Status</th><th>Keys</th><th>Dependencies</th></tr></thead><tbody>{visibleResources.map((resource) => <ResourceRow key={resource.address} resource={resource} />)}</tbody></table></div>
+      {visibleResources.length < resources.length && <div className="progressiveFooter"><span>Showing the first {visibleResources.length.toLocaleString()} of {resources.length.toLocaleString()} matching resources.</span><button type="button" className="button buttonSecondary" onClick={() => setVisibleLimit((current) => current + resourceBatchSize)}>Load {Math.min(resourceBatchSize, resources.length - visibleResources.length).toLocaleString()} more</button></div>}
       {!resources.length && <div className="emptyState"><MagnifyingGlass size={26} /><strong>No resources match</strong><p>Try a broader query or clear one of the filters.</p></div>}
     </section>}
 

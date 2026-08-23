@@ -54,6 +54,36 @@ it('filters inspected resources and exposes the findings explorer', () => {
   expect(screen.getByText(finding.title)).toBeInTheDocument()
 })
 
+it('renders large resource inventories progressively', () => {
+  const resources = Array.from({ length: 10_000 }, (_, index) => ({
+    ...resource,
+    address: `terraform_data.item_${String(index).padStart(5, '0')}`,
+    resource_name: `item_${String(index).padStart(5, '0')}`,
+  }))
+  const result: InspectionResult = {
+    schema_version: 'planparity/v1',
+    snapshot: {
+      schema_version: 'planparity/v1', format_version: '1.0',
+      engine: { kind: 'terraform', name: 'Terraform', version: '1.12.0' },
+      resources, providers: [], modules: [], outputs: [], source_hash: 'large',
+    },
+    findings: [],
+  }
+  render(<StateExplorer result={result} onExport={() => undefined} />)
+
+  fireEvent.click(screen.getByRole('tab', { name: 'Resources' }))
+  expect(screen.getByText('terraform_data.item_00249')).toBeInTheDocument()
+  expect(screen.queryByText('terraform_data.item_00250')).not.toBeInTheDocument()
+  expect(screen.getByText('Showing the first 250 of 10,000 matching resources.')).toBeInTheDocument()
+
+  fireEvent.click(screen.getByRole('button', { name: 'Load 250 more' }))
+  expect(screen.getByText('terraform_data.item_00499')).toBeInTheDocument()
+
+  fireEvent.change(screen.getByPlaceholderText('Search address, type, or provider'), { target: { value: 'item_09999' } })
+  expect(screen.getByText('terraform_data.item_09999')).toBeInTheDocument()
+  expect(screen.getByText('1 of 10000 resources')).toBeInTheDocument()
+})
+
 it('shows both sides of a changed resource and move evidence', () => {
   const after = { ...resource, schema_version: 1 }
   const result: StateComparison = {

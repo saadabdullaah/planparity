@@ -2,6 +2,7 @@ package normalize
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -116,4 +117,40 @@ func FuzzStateNeverPanics(f *testing.F) {
 	f.Fuzz(func(t *testing.T, raw []byte) {
 		_, _ = State(raw, model.EngineTerraform)
 	})
+}
+
+func BenchmarkStateTenThousand(b *testing.B) {
+	resources := make([]rawResource, 10_000)
+	for index := range resources {
+		name := fmt.Sprintf("item_%05d", index)
+		resources[index] = rawResource{
+			Address:       "terraform_data." + name,
+			Mode:          "managed",
+			Type:          "terraform_data",
+			Name:          name,
+			ProviderName:  "terraform.io/builtin/terraform",
+			SchemaVersion: 0,
+			Values:        json.RawMessage(`{"id":"fixture","input":{"enabled":true}}`),
+		}
+	}
+	raw, err := json.Marshal(rawStateShow{
+		FormatVersion:    "1.0",
+		TerraformVersion: "1.12.0",
+		Values:           &rawValues{RootModule: &rawModule{Resources: resources}},
+	})
+	if err != nil {
+		b.Fatal(err)
+	}
+	b.SetBytes(int64(len(raw)))
+	b.ReportAllocs()
+	b.ResetTimer()
+	for b.Loop() {
+		snapshot, err := State(raw, model.EngineTerraform)
+		if err != nil {
+			b.Fatal(err)
+		}
+		if len(snapshot.Resources) != len(resources) {
+			b.Fatalf("resources=%d want=%d", len(snapshot.Resources), len(resources))
+		}
+	}
 }
